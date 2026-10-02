@@ -1,0 +1,29 @@
+package com.dinechain.dto.request;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class CreateReservationRequest {
+    @NotNull(message = "Branch ID is required")
+    private Integer branchId;
+
+    @NotNull(message = "Customer ID is required")
+    private Integer customerId;
+
+    @NotNull(message = "Reservation date is required")
+    private LocalDateTime reservationDate;
+
+    @NotNull(message = "Number of guests is required")
+    private Integer numberOfGuests;
+
+    private String notes;
+}

@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: DineChain
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+    show-sql: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dinechain
+    username: dinechain
+    password: dinechain123
+    driver-class-name: org.postgresql.Driver
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+  flyway:
+    enabled: false
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY:your-super-secret-key-change-this-in-production-min-32-chars-please}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800}
+
+logging:
+  level:
+    root: INFO
+    com.dinechain: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

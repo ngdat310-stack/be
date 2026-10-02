@@ -1,0 +1,105 @@
+package com.dinechain.entity;
+
+import com.dinechain.constant.OrderStatus;
+import com.dinechain.constant.OrderType;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "orders", indexes = {
+    @Index(columnList = "branch_id, opened_at"),
+    @Index(columnList = "branch_id, status"),
+    @Index(columnList = "table_id"),
+    @Index(columnList = "customer_id")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class OrderEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(nullable = false, unique = true, length = 30)
+    private String code;
+
+    @Column(name = "branch_id", nullable = false)
+    private Integer branchId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderType type;
+
+    @Column(name = "table_id")
+    private Integer tableId;
+
+    @Column(name = "reservation_id")
+    private Integer reservationId;
+
+    @Column(name = "customer_id")
+    private Integer customerId;
+
+    @Column(name = "guest_count")
+    private Integer guestCount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status = OrderStatus.OPEN;
+
+    @Column(name = "delivery_address", length = 500)
+    private String deliveryAddress;
+
+    @Column(name = "delivery_phone", length = 20)
+    private String deliveryPhone;
+
+    @Column(name = "delivery_fee", nullable = false, precision = 12, scale = 0)
+    private BigDecimal deliveryFee = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 14, scale = 0)
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Column(name = "promotion_id")
+    private Integer promotionId;
+
+    @Column(name = "discount_amount", nullable = false, precision = 14, scale = 0)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "points_used", nullable = false)
+    private Integer pointsUsed = 0;
+
+    @Column(name = "vat_amount", nullable = false, precision = 14, scale = 0)
+    private BigDecimal vatAmount = BigDecimal.ZERO;
+
+    @Column(name = "total_amount", nullable = false, precision = 14, scale = 0)
+    private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
+    @Column(name = "cancel_reason", length = 255)
+    private String cancelReason;
+
+    @Column(name = "opened_by", nullable = false)
+    private Integer openedBy;
+
+    @Column(name = "closed_by")
+    private Integer closedBy;
+
+    @CreationTimestamp
+    @Column(name = "opened_at", nullable = false, updatable = false)
+    private LocalDateTime openedAt;
+
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+}
