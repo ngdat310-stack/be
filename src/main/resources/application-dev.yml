@@ -1,0 +1,23 @@
+# Local development: `mvn spring-boot:run` / IntelliJ Run use this profile unless another one is active.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/dinechain
+    username: dinechain
+    password: dinechain123
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+dinechain:
+  cors:
+    allowed-origins: http://localhost:3000,http://127.0.0.1:3000,https://*.ngrok-free.dev
+  # 9 demo branches + accounts (owner/Owner@123, cashier1/Staff@123, ...) when the database is empty
+  demo-data:
+    enabled: true
+
+logging:
+  level:
+    com.dinechain: DEBUG
+    org.springframework.security: DEBUG

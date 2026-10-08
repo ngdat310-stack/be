@@ -31,7 +31,12 @@ public class ReservationResponse {
         response.setBranchId(entity.getBranchId());
         response.setCustomerId(entity.getCustomerId());
         response.setTableId(entity.getTableId());
+        response.setReservationDate(entity.getReservedAt());
+        response.setNumberOfGuests(entity.getGuestCount());
         response.setStatus(entity.getStatus());
+        response.setNotes(entity.getNote());
+        response.setCreatedAt(entity.getCreatedAt());
+        response.setUpdatedAt(entity.getUpdatedAt());
         return response;
     }
 }

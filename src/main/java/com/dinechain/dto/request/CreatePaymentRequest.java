@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -16,13 +18,11 @@ public class CreatePaymentRequest {
     @NotNull(message = "Order ID is required")
     private Integer orderId;
 
-    @NotNull(message = "Amount is required")
-    @DecimalMin("0")
-    private Double amount;
+    // Only CASH is accepted for now (no bank / e-wallet integration); defaults to CASH
+    private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
-    @NotNull(message = "Payment method is required")
-    private PaymentMethod paymentMethod;
-
-    private String referenceNumber;
-    private String notes;
+    // Money the customer handed over; change is calculated by the server
+    @NotNull(message = "Cash received is required")
+    @DecimalMin(value = "0", message = "Cash received must not be negative")
+    private BigDecimal cashReceived;
 }

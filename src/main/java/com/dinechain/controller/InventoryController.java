@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.dinechain.security.CurrentUser;
+import com.dinechain.security.Roles;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,28 +27,32 @@ public class InventoryController {
     @GetMapping("/branch/{branchId}/ingredient/{ingredientId}")
     @Operation(summary = "Lấy kho nguyên liệu")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<InventoryResponse> getInventory(@PathVariable Integer branchId, @PathVariable Integer ingredientId) {
-        return ResponseEntity.ok(inventoryService.getInventory(branchId, ingredientId));
+    @PreAuthorize(Roles.STOCK_READ)
+    public ResponseEntity<InventoryResponse> getInventory(@CurrentUser Integer staffId, @PathVariable Integer branchId, @PathVariable Integer ingredientId) {
+        return ResponseEntity.ok(inventoryService.getInventory(staffId, branchId, ingredientId));
     }
 
     @PutMapping("/branch/{branchId}/ingredient/{ingredientId}")
     @Operation(summary = "Cập nhật kho nguyên liệu")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<InventoryResponse> updateInventory(@PathVariable Integer branchId, @PathVariable Integer ingredientId, @Valid @RequestBody UpdateInventoryRequest request) {
-        return ResponseEntity.ok(inventoryService.updateInventory(branchId, ingredientId, request));
+    @PreAuthorize(Roles.STOCK)
+    public ResponseEntity<InventoryResponse> updateInventory(@CurrentUser Integer staffId, @PathVariable Integer branchId, @PathVariable Integer ingredientId, @Valid @RequestBody UpdateInventoryRequest request) {
+        return ResponseEntity.ok(inventoryService.updateInventory(staffId, branchId, ingredientId, request));
     }
 
     @GetMapping("/branch/{branchId}")
     @Operation(summary = "Danh sách kho theo chi nhánh")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<List<InventoryResponse>> getByBranch(@PathVariable Integer branchId) {
-        return ResponseEntity.ok(inventoryService.getInventoriesByBranch(branchId));
+    @PreAuthorize(Roles.STOCK_READ)
+    public ResponseEntity<List<InventoryResponse>> getByBranch(@CurrentUser Integer staffId, @PathVariable Integer branchId) {
+        return ResponseEntity.ok(inventoryService.getInventoriesByBranch(staffId, branchId));
     }
 
     @GetMapping("/branch/{branchId}/low-stock")
     @Operation(summary = "Danh sách hàng hết/thiếu")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<List<InventoryResponse>> getLowStock(@PathVariable Integer branchId) {
-        return ResponseEntity.ok(inventoryService.getLowStockItems(branchId));
+    @PreAuthorize(Roles.STOCK_READ)
+    public ResponseEntity<List<InventoryResponse>> getLowStock(@CurrentUser Integer staffId, @PathVariable Integer branchId) {
+        return ResponseEntity.ok(inventoryService.getLowStockItems(staffId, branchId));
     }
 }

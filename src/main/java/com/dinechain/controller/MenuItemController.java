@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.dinechain.security.Roles;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,7 @@ public class MenuItemController {
     @PostMapping
     @Operation(summary = "Tạo mục menu")
     @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize(Roles.ADMIN)
     public ResponseEntity<MenuItemResponse> create(@Valid @RequestBody CreateMenuItemRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(itemService.createItem(request));
     }
@@ -40,6 +43,7 @@ public class MenuItemController {
     @PutMapping("/{itemId}")
     @Operation(summary = "Cập nhật mục menu")
     @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize(Roles.ADMIN)
     public ResponseEntity<MenuItemResponse> update(@PathVariable Integer itemId, @Valid @RequestBody UpdateMenuItemRequest request) {
         return ResponseEntity.ok(itemService.updateItem(itemId, request));
     }
@@ -47,6 +51,7 @@ public class MenuItemController {
     @DeleteMapping("/{itemId}")
     @Operation(summary = "Xoá mục menu")
     @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize(Roles.ADMIN)
     public ResponseEntity<Void> delete(@PathVariable Integer itemId) {
         itemService.deleteItem(itemId);
         return ResponseEntity.noContent().build();

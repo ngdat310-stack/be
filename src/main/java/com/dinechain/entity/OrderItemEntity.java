@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "order_items", indexes = {
     @Index(columnList = "order_id"),
-    @Index(columnList = "status")
+    @Index(columnList = "status"),
+    @Index(columnList = "ready_at")
 })
 @Getter
 @Setter
@@ -61,6 +62,10 @@ public class OrderItemEntity {
     @CreationTimestamp
     @Column(name = "ordered_at", nullable = false, updatable = false)
     private LocalDateTime orderedAt;
+
+    // When the kitchen finished the dish; used to measure kitchen throughput
+    @Column(name = "ready_at")
+    private LocalDateTime readyAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)

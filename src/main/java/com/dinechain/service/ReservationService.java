@@ -6,10 +6,10 @@ import com.dinechain.dto.response.ReservationResponse;
 import java.util.List;
 
 public interface ReservationService {
-    ReservationResponse createReservation(CreateReservationRequest request);
-    ReservationResponse getReservation(Integer reservationId);
-    ReservationResponse confirmReservation(Integer reservationId);
-    ReservationResponse cancelReservation(Integer reservationId);
-    List<ReservationResponse> getReservationsByBranch(Integer branchId);
+    ReservationResponse createReservation(Integer staffId, CreateReservationRequest request);
+    ReservationResponse getReservation(Integer staffId, Integer reservationId);
+    ReservationResponse confirmReservation(Integer staffId, Integer reservationId);
+    ReservationResponse cancelReservation(Integer staffId, Integer reservationId);
+    List<ReservationResponse> getReservationsByBranch(Integer staffId, Integer branchId);
     List<ReservationResponse> getReservationsByCustomer(Integer customerId);
 }

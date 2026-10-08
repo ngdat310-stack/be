@@ -5,6 +5,8 @@ import com.dinechain.dto.response.CustomerResponse;
 import com.dinechain.entity.CustomerEntity;
 import com.dinechain.repository.CustomerRepository;
 import com.dinechain.service.CustomerService;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,7 +26,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional
     public CustomerResponse createCustomer(CreateCustomerRequest request) {
         if (customerRepository.findByPhone(request.getPhone()).isPresent()) {
-            throw new RuntimeException("Phone already registered");
+            throw new AppException(ErrorCode.CONFLICT, "Phone already registered");
         }
 
         CustomerEntity customer = new CustomerEntity();
@@ -42,7 +44,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public CustomerResponse getCustomer(Integer customerId) {
         CustomerEntity customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Customer not found"));
         return CustomerResponse.from(customer);
     }
 
@@ -50,7 +52,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional
     public CustomerResponse updateCustomer(Integer customerId, CreateCustomerRequest request) {
         CustomerEntity customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Customer not found"));
 
         customer.setFullName(request.getFullName());
         customer.setEmail(request.getEmail());
@@ -64,7 +66,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional
     public void deleteCustomer(Integer customerId) {
         CustomerEntity customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new RuntimeException("Customer not found"));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Customer not found"));
         customerRepository.delete(customer);
         log.info("Deleted customer: {}", customer.getFullName());
     }
@@ -75,5 +77,12 @@ public class CustomerServiceImpl implements CustomerService {
             .stream()
             .map(CustomerResponse::from)
             .toList();
+    }
+
+    @Override
+    public CustomerResponse findByPhone(String phone) {
+        return customerRepository.findByPhone(phone.trim())
+            .map(CustomerResponse::from)
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "No customer with phone " + phone));
     }
 }

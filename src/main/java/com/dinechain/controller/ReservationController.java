@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.dinechain.security.CurrentUser;
+import com.dinechain.security.Roles;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,41 +28,45 @@ public class ReservationController {
     @PostMapping
     @Operation(summary = "Tạo đặt bàn")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReservationResponse> createReservation(@Valid @RequestBody CreateReservationRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(reservationService.createReservation(request));
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
+    public ResponseEntity<ReservationResponse> createReservation(@CurrentUser Integer staffId, @Valid @RequestBody CreateReservationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservationService.createReservation(staffId, request));
     }
 
     @GetMapping("/{reservationId}")
     @Operation(summary = "Lấy đặt bàn")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReservationResponse> getReservation(@PathVariable Integer reservationId) {
-        return ResponseEntity.ok(reservationService.getReservation(reservationId));
+    public ResponseEntity<ReservationResponse> getReservation(@CurrentUser Integer staffId, @PathVariable Integer reservationId) {
+        return ResponseEntity.ok(reservationService.getReservation(staffId, reservationId));
     }
 
     @PutMapping("/{reservationId}/confirm")
     @Operation(summary = "Xác nhận đặt bàn")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReservationResponse> confirmReservation(@PathVariable Integer reservationId) {
-        return ResponseEntity.ok(reservationService.confirmReservation(reservationId));
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
+    public ResponseEntity<ReservationResponse> confirmReservation(@CurrentUser Integer staffId, @PathVariable Integer reservationId) {
+        return ResponseEntity.ok(reservationService.confirmReservation(staffId, reservationId));
     }
 
     @PutMapping("/{reservationId}/cancel")
     @Operation(summary = "Hủy đặt bàn")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReservationResponse> cancelReservation(@PathVariable Integer reservationId) {
-        return ResponseEntity.ok(reservationService.cancelReservation(reservationId));
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
+    public ResponseEntity<ReservationResponse> cancelReservation(@CurrentUser Integer staffId, @PathVariable Integer reservationId) {
+        return ResponseEntity.ok(reservationService.cancelReservation(staffId, reservationId));
     }
 
     @GetMapping("/branch/{branchId}")
     @Operation(summary = "Danh sách đặt bàn theo chi nhánh")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<List<ReservationResponse>> getByBranch(@PathVariable Integer branchId) {
-        return ResponseEntity.ok(reservationService.getReservationsByBranch(branchId));
+    public ResponseEntity<List<ReservationResponse>> getByBranch(@CurrentUser Integer staffId, @PathVariable Integer branchId) {
+        return ResponseEntity.ok(reservationService.getReservationsByBranch(staffId, branchId));
     }
 
     @GetMapping("/customer/{customerId}")
     @Operation(summary = "Danh sách đặt bàn theo khách hàng")
     @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
     public ResponseEntity<List<ReservationResponse>> getByCustomer(@PathVariable Integer customerId) {
         return ResponseEntity.ok(reservationService.getReservationsByCustomer(customerId));
     }

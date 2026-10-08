@@ -23,6 +23,7 @@ public class BranchResponse {
     private LocalDateTime openTime;
     private LocalDateTime closeTime;
     private Integer managerId;
+    private Integer kitchenCapacity;
     private BranchStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -38,6 +39,7 @@ public class BranchResponse {
         response.setOpenTime(entity.getOpenTime());
         response.setCloseTime(entity.getCloseTime());
         response.setManagerId(entity.getManagerId());
+        response.setKitchenCapacity(entity.getKitchenCapacity());
         response.setStatus(entity.getStatus());
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedAt(entity.getUpdatedAt());

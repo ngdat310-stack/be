@@ -6,6 +6,8 @@ import com.dinechain.dto.response.MenuItemResponse;
 import com.dinechain.entity.MenuItemEntity;
 import com.dinechain.repository.MenuItemRepository;
 import com.dinechain.service.MenuItemService;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,7 +27,7 @@ public class MenuItemServiceImpl implements MenuItemService {
     @Transactional
     public MenuItemResponse createItem(CreateMenuItemRequest request) {
         if (itemRepository.findByCode(request.getCode()).isPresent()) {
-            throw new RuntimeException("Item code already exists: " + request.getCode());
+            throw new AppException(ErrorCode.DUPLICATE_CODE, "Item code already exists: " + request.getCode());
         }
 
         MenuItemEntity item = MenuItemEntity.builder()
@@ -47,7 +49,7 @@ public class MenuItemServiceImpl implements MenuItemService {
     @Override
     public MenuItemResponse getItem(Integer itemId) {
         MenuItemEntity item = itemRepository.findById(itemId)
-            .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Item not found: " + itemId));
         return MenuItemResponse.from(item);
     }
 
@@ -55,7 +57,7 @@ public class MenuItemServiceImpl implements MenuItemService {
     @Transactional
     public MenuItemResponse updateItem(Integer itemId, UpdateMenuItemRequest request) {
         MenuItemEntity item = itemRepository.findById(itemId)
-            .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Item not found: " + itemId));
 
         item.setName(request.getName());
         item.setDescription(request.getDescription());
@@ -81,7 +83,7 @@ public class MenuItemServiceImpl implements MenuItemService {
     @Transactional
     public void deleteItem(Integer itemId) {
         MenuItemEntity item = itemRepository.findById(itemId)
-            .orElseThrow(() -> new RuntimeException("Item not found: " + itemId));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Item not found: " + itemId));
 
         itemRepository.delete(item);
         log.info("Deleted menu item: {} ({})", item.getName(), item.getCode());

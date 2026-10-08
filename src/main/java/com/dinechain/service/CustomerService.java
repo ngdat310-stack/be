@@ -11,4 +11,5 @@ public interface CustomerService {
     CustomerResponse updateCustomer(Integer customerId, CreateCustomerRequest request);
     void deleteCustomer(Integer customerId);
     List<CustomerResponse> searchCustomers(String fullName);
+    CustomerResponse findByPhone(String phone);
 }

@@ -1,12 +1,17 @@
 package com.dinechain.service.impl;
 
+import com.dinechain.constant.StaffRole;
 import com.dinechain.constant.StaffStatus;
 import com.dinechain.dto.request.CreateStaffRequest;
 import com.dinechain.dto.request.UpdateStaffRequest;
 import com.dinechain.dto.response.StaffDetailResponse;
 import com.dinechain.entity.StaffEntity;
+import com.dinechain.repository.RefreshTokenRepository;
 import com.dinechain.repository.StaffRepository;
+import com.dinechain.security.BranchAccessGuard;
 import com.dinechain.service.StaffService;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,24 +19,33 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class StaffServiceImpl implements StaffService {
 
+    private static final Set<StaffRole> BRANCH_MANAGED_ROLES =
+        EnumSet.of(StaffRole.CASHIER, StaffRole.WAITER, StaffRole.CHEF, StaffRole.WAREHOUSE);
+
     private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
+    private final BranchAccessGuard branchAccessGuard;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     @Transactional
-    public StaffDetailResponse createStaff(CreateStaffRequest request) {
+    public StaffDetailResponse createStaff(Integer actorId, CreateStaffRequest request) {
+        checkCanManage(findStaff(actorId), request.getBranchId(), request.getRole());
         if (staffRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already exists: " + request.getUsername());
+            throw new AppException(ErrorCode.DUPLICATE_USERNAME, "Username already exists: " + request.getUsername());
         }
         if (staffRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists: " + request.getEmail());
+            throw new AppException(ErrorCode.DUPLICATE_EMAIL, "Email already exists: " + request.getEmail());
         }
 
         StaffEntity staff = new StaffEntity();
@@ -45,7 +59,7 @@ public class StaffServiceImpl implements StaffService {
         if (request.getHourlyRate() != null) {
             staff.setHourlyRate(java.math.BigDecimal.valueOf(request.getHourlyRate()));
         }
-        staff.setPasswordHash(passwordEncoder.encode("DefaultPassword@123"));
+        staff.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         staff.setStatus(StaffStatus.ACTIVE);
         staff.setHiredAt(LocalDateTime.now());
 
@@ -55,17 +69,27 @@ public class StaffServiceImpl implements StaffService {
     }
 
     @Override
-    public StaffDetailResponse getStaff(Integer staffId) {
-        StaffEntity staff = staffRepository.findById(staffId)
-            .orElseThrow(() -> new RuntimeException("Staff not found: " + staffId));
+    public StaffDetailResponse getStaff(Integer actorId, Integer staffId) {
+        StaffEntity staff = findStaff(staffId);
+        // Everyone may see their own profile; managers see their branch; the owner sees everybody
+        if (!actorId.equals(staffId)) {
+            StaffEntity actor = findStaff(actorId);
+            if (actor.getRole() != StaffRole.ADMIN
+                && !(actor.getRole() == StaffRole.BRANCH_MANAGER && Objects.equals(actor.getBranchId(), staff.getBranchId()))) {
+                throw new AppException(ErrorCode.FORBIDDEN, "Cannot view staff " + staffId);
+            }
+        }
         return StaffDetailResponse.from(staff);
     }
 
     @Override
     @Transactional
-    public StaffDetailResponse updateStaff(Integer staffId, UpdateStaffRequest request) {
-        StaffEntity staff = staffRepository.findById(staffId)
-            .orElseThrow(() -> new RuntimeException("Staff not found: " + staffId));
+    public StaffDetailResponse updateStaff(Integer actorId, Integer staffId, UpdateStaffRequest request) {
+        StaffEntity staff = findStaff(staffId);
+        StaffEntity actor = findStaff(actorId);
+        // Both the current and the new role must be within what the actor may manage (no self-promotion)
+        checkCanManage(actor, staff.getBranchId(), staff.getRole());
+        checkCanManage(actor, staff.getBranchId(), request.getRole());
 
         staff.setFullName(request.getFullName());
         staff.setEmail(request.getEmail());
@@ -83,9 +107,9 @@ public class StaffServiceImpl implements StaffService {
 
     @Override
     @Transactional
-    public void deleteStaff(Integer staffId) {
-        StaffEntity staff = staffRepository.findById(staffId)
-            .orElseThrow(() -> new RuntimeException("Staff not found: " + staffId));
+    public void deleteStaff(Integer actorId, Integer staffId) {
+        StaffEntity staff = findStaff(staffId);
+        checkCanManage(findStaff(actorId), staff.getBranchId(), staff.getRole());
 
         staff.setStatus(StaffStatus.RESIGNED);
         staff.setUpdatedAt(LocalDateTime.now());
@@ -93,8 +117,22 @@ public class StaffServiceImpl implements StaffService {
         log.info("Deactivated staff: {} ({})", staff.getFullName(), staff.getCode());
     }
 
+    // For staff who forgot their password; every session they had is ended
     @Override
-    public List<StaffDetailResponse> getStaffByBranch(Integer branchId) {
+    @Transactional
+    public void resetPassword(Integer actorId, Integer staffId, String newPassword) {
+        StaffEntity staff = findStaff(staffId);
+        checkCanManage(findStaff(actorId), staff.getBranchId(), staff.getRole());
+        staff.setPasswordHash(passwordEncoder.encode(newPassword));
+        staff.setUpdatedAt(LocalDateTime.now());
+        staffRepository.save(staff);
+        refreshTokenRepository.revokeAllTokensByStaffId(staffId, LocalDateTime.now());
+        log.info("Password of {} ({}) reset by staff {}", staff.getFullName(), staff.getCode(), actorId);
+    }
+
+    @Override
+    public List<StaffDetailResponse> getStaffByBranch(Integer actorId, Integer branchId) {
+        branchAccessGuard.check(actorId, branchId);
         return staffRepository.findByBranchIdAndStatus(branchId, StaffStatus.ACTIVE)
             .stream()
             .map(StaffDetailResponse::from)
@@ -108,5 +146,24 @@ public class StaffServiceImpl implements StaffService {
             .filter(s -> s.getStatus() == StaffStatus.ACTIVE)
             .map(StaffDetailResponse::from)
             .toList();
+    }
+
+    private StaffEntity findStaff(Integer staffId) {
+        return staffRepository.findById(staffId)
+            .orElseThrow(() -> new AppException(ErrorCode.STAFF_NOT_FOUND, "Staff not found: " + staffId));
+    }
+
+    // Owner manages everyone. A branch manager only manages cashiers, waiters, chefs and warehouse staff of
+    // their own branch, so nobody can create or promote an account above their own level
+    private void checkCanManage(StaffEntity actor, Integer branchId, StaffRole role) {
+        if (actor.getRole() == StaffRole.ADMIN) {
+            return;
+        }
+        if (actor.getRole() != StaffRole.BRANCH_MANAGER || !Objects.equals(actor.getBranchId(), branchId)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Cannot manage staff of branch " + branchId);
+        }
+        if (!BRANCH_MANAGED_ROLES.contains(role)) {
+            throw new AppException(ErrorCode.FORBIDDEN, "A branch manager cannot manage " + role + " accounts");
+        }
     }
 }

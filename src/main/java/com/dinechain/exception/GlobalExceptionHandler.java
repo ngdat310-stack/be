@@ -2,13 +2,19 @@ package com.dinechain.exception;
 
 import com.dinechain.dto.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +85,35 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .status(HttpStatus.FORBIDDEN)
             .body(response);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex) {
+        return error(ErrorCode.NOT_FOUND, "No endpoint " + ex.getResourcePath());
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return error(ErrorCode.METHOD_NOT_ALLOWED, ex.getMessage());
+    }
+
+    // Unreadable JSON, unknown enum value (e.g. paymentMethod "BITCOIN"), wrong path/query parameter type
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
+        MissingServletRequestParameterException.class})
+    public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
+        log.warn("Bad request: {}", ex.getMessage());
+        return error(ErrorCode.INVALID_REQUEST, "Malformed request: check the JSON body and parameters");
+    }
+
+    // Last line of defence for unique constraints hit by two requests at the same time
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+        return error(ErrorCode.CONFLICT, "The data conflicts with existing records");
+    }
+
+    private static ResponseEntity<ErrorResponse> error(ErrorCode code, String message) {
+        return ResponseEntity.status(code.getHttpStatus()).body(new ErrorResponse(code.getCode(), message));
     }
 
     @ExceptionHandler(Exception.class)

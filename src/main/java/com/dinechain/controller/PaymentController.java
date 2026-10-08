@@ -7,6 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.dinechain.security.CurrentUser;
+import com.dinechain.security.Roles;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,31 +24,32 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    @Operation(summary = "Xử lý thanh toán")
+    @Operation(summary = "Thanh toán tiền mặt", description = "Nhập tiền khách đưa (cashReceived), server tính tiền thối. Chỉ nhận CASH")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<PaymentResponse> processPayment(@Valid @RequestBody CreatePaymentRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.processPayment(request));
+    @PreAuthorize(Roles.CASHIER)
+    public ResponseEntity<PaymentResponse> processPayment(@CurrentUser Integer staffId, @Valid @RequestBody CreatePaymentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.processPayment(staffId, request));
     }
 
     @GetMapping("/{paymentId}")
     @Operation(summary = "Lấy thông tin thanh toán")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<PaymentResponse> getPayment(@PathVariable Integer paymentId) {
-        return ResponseEntity.ok(paymentService.getPayment(paymentId));
+    public ResponseEntity<PaymentResponse> getPayment(@CurrentUser Integer staffId, @PathVariable Integer paymentId) {
+        return ResponseEntity.ok(paymentService.getPayment(staffId, paymentId));
     }
 
     @GetMapping("/order/{orderId}")
     @Operation(summary = "Lấy thanh toán theo đơn hàng")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<PaymentResponse> getPaymentByOrder(@PathVariable Integer orderId) {
-        return ResponseEntity.ok(paymentService.getPaymentByOrder(orderId));
+    public ResponseEntity<PaymentResponse> getPaymentByOrder(@CurrentUser Integer staffId, @PathVariable Integer orderId) {
+        return ResponseEntity.ok(paymentService.getPaymentByOrder(staffId, orderId));
     }
 
     @PutMapping("/{paymentId}/refund")
-    @Operation(summary = "Hoàn tiền")
+    @PreAuthorize(Roles.MANAGEMENT)
+    @Operation(summary = "Hoàn tiền", description = "Chỉ quản lý / chủ chuỗi")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<Void> refundPayment(@PathVariable Integer paymentId) {
-        paymentService.refundPayment(paymentId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<PaymentResponse> refundPayment(@CurrentUser Integer staffId, @PathVariable Integer paymentId) {
+        return ResponseEntity.ok(paymentService.refundPayment(staffId, paymentId));
     }
 }

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -17,12 +18,19 @@ import java.time.LocalDateTime;
 public class PaymentResponse {
     private Integer id;
     private Integer orderId;
-    private java.math.BigDecimal amount;
+    private BigDecimal amount;
+    private BigDecimal cashReceived;
+    private BigDecimal changeAmount;
     private PaymentMethod method;
     private PaymentStatus status;
+    private Integer receivedBy;
     private LocalDateTime paidAt;
+    private Integer refundedBy;
+    private LocalDateTime refundedAt;
 
     public static PaymentResponse from(PaymentEntity entity) {
-        return new PaymentResponse(entity.getId(), entity.getOrderId(), entity.getAmount(), entity.getMethod(), entity.getStatus(), entity.getPaidAt());
+        return new PaymentResponse(entity.getId(), entity.getOrderId(), entity.getAmount(), entity.getCashReceived(),
+            entity.getChangeAmount(), entity.getMethod(), entity.getStatus(), entity.getReceivedBy(), entity.getPaidAt(),
+            entity.getRefundedBy(), entity.getRefundedAt());
     }
 }

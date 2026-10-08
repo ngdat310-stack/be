@@ -3,6 +3,7 @@ package com.dinechain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -27,7 +28,7 @@ public class StaffShiftEntity {
     private Integer shiftId;
 
     @Column(name = "work_date", nullable = false)
-    private LocalDateTime workDate;
+    private LocalDate workDate;
 
     @Column(name = "check_in_at")
     private LocalDateTime checkInAt;

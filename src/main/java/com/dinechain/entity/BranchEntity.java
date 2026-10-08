@@ -48,6 +48,10 @@ public class BranchEntity {
     @Column(name = "manager_id")
     private Integer managerId;
 
+    // Max dish portions waiting/cooking before takeaway & delivery are paused; null = default from config
+    @Column(name = "kitchen_capacity")
+    private Integer kitchenCapacity;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

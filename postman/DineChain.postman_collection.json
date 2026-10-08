@@ -1,0 +1,4729 @@
+{
+  "info": {
+    "_postman_id": "a56bd250-4568-50a4-9594-d338e7669b3e",
+    "name": "DineChain - Chuỗi nhà hàng & giờ cao điểm",
+    "description": "Chạy theo thứ tự (Run collection). Cần backend chạy với dữ liệu demo (dinechain.demo-data.enabled=true).\nĐổi biến baseUrl nếu chạy cổng khác. Chạy lại nhiều lần trên cùng database vẫn được.\n\nTài khoản: owner / Owner@123; manager1..9, cashier1..9, chef1..9, waiter1..9 / Staff@123\nThanh toán: chỉ tiền mặt - nhập cashReceived, server tính tiền thối. VAT được đặt 8% ở bước đầu.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Đăng nhập & dữ liệu nền",
+      "description": "Đăng nhập các vai trò, lấy id chi nhánh, bàn và món ăn.",
+      "item": [
+        {
+          "name": "Login owner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 + access token\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().accessToken).to.be.a(\"string\");",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenOwner\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"tokenOwnerId\", pm.response.json().staff.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"owner\",\n  \"password\": \"Owner@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login manager1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 + access token\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().accessToken).to.be.a(\"string\");",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenManager1\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"tokenManager1Id\", pm.response.json().staff.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"manager1\",\n  \"password\": \"Staff@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login cashier1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 + access token\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().accessToken).to.be.a(\"string\");",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenCashier1\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"tokenCashier1Id\", pm.response.json().staff.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"cashier1\",\n  \"password\": \"Staff@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login chef1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 + access token\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().accessToken).to.be.a(\"string\");",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenChef1\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"tokenChef1Id\", pm.response.json().staff.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"chef1\",\n  \"password\": \"Staff@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login waiter1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 + access token\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().accessToken).to.be.a(\"string\");",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenWaiter1\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"tokenWaiter1Id\", pm.response.json().staff.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"waiter1\",\n  \"password\": \"Staff@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login cashier9",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 + access token\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().accessToken).to.be.a(\"string\");",
+                  "});",
+                  "pm.collectionVariables.set(\"tokenCashier9\", pm.response.json().accessToken);",
+                  "pm.collectionVariables.set(\"tokenCashier9Id\", pm.response.json().staff.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"cashier9\",\n  \"password\": \"Staff@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Thu ngân đổi VAT → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/settings/vat",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"percent\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "Chủ chuỗi đặt VAT 8%",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, 8%\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().percent).to.eql(8);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/settings/vat",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"percent\": 8\n}"
+            }
+          }
+        },
+        {
+          "name": "Login sai mật khẩu → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401 INVALID_CREDENTIALS\", () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_CREDENTIALS\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"owner\",\n  \"password\": \"WrongPass1\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Không có token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/branches"
+          }
+        },
+        {
+          "name": "Danh sách chi nhánh (lấy id CN01, CN02, CN03, CN09)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"9 chi nhánh demo\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().length).to.be.at.least(9);",
+                  "});",
+                  "const byCode = Object.fromEntries(pm.response.json().map(b => [b.code, b.id]));",
+                  "pm.collectionVariables.set(\"branch1\", byCode[\"CN01\"]);",
+                  "pm.collectionVariables.set(\"branch2\", byCode[\"CN02\"]);",
+                  "pm.collectionVariables.set(\"branch3\", byCode[\"CN03\"]);",
+                  "pm.collectionVariables.set(\"branch9\", byCode[\"CN09\"]);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches"
+          }
+        },
+        {
+          "name": "Sơ đồ bàn CN01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"20 bàn\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().length).to.eql(20);",
+                  "});",
+                  "const tables = pm.response.json();",
+                  "pm.collectionVariables.set(\"table1\", tables[4].id);",
+                  "pm.collectionVariables.set(\"table1b\", tables[5].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/tables"
+          }
+        },
+        {
+          "name": "Sơ đồ bàn CN09",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"table9\", pm.response.json()[0].id);",
+                  "pm.collectionVariables.set(\"table9b\", pm.response.json()[1].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch9}}/tables"
+          }
+        },
+        {
+          "name": "Thu ngân CN01 xem bàn CN09 → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch9}}/tables"
+          }
+        },
+        {
+          "name": "Menu món chính (lấy id món)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const byCode = Object.fromEntries(pm.response.json().map(m => [m.code, m.id]));",
+                  "pm.collectionVariables.set(\"phoId\", byCode[\"PHO-BO\"]);",
+                  "pm.collectionVariables.set(\"lauId\", byCode[\"LAU-THAI\"]);",
+                  "pm.collectionVariables.set(\"comId\", byCode[\"COM-RANG\"]);",
+                  "pm.test(\"Có Phở bò, Lẩu Thái, Cơm rang\", () => {",
+                  "    pm.expect(byCode[\"PHO-BO\"]).to.be.a(\"number\");",
+                  "    pm.expect(byCode[\"LAU-THAI\"]).to.be.a(\"number\");",
+                  "    pm.expect(byCode[\"COM-RANG\"]).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/menu-items/category/1"
+          }
+        },
+        {
+          "name": "Menu đồ uống (lấy id trà đá)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"teaId\", pm.response.json().find(m => m.code === \"TRA-DA\").id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/menu-items/category/2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Đặt món → bếp → thu tiền mặt → hoàn tất (CN01)",
+      "description": "Luồng chuẩn của một đơn tại bàn, thanh toán tiền mặt.",
+      "item": [
+        {
+          "name": "Tồn kho CN01 trước khi nấu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const stock = Object.fromEntries(pm.response.json().map(i => [i.ingredientId, i.quantity]));",
+                  "pm.collectionVariables.set(\"stockBefore\", JSON.stringify(stock));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/inventory/branch/{{branch1}}"
+          }
+        },
+        {
+          "name": "Tạo đơn tại bàn (client gửi giá giả)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"Mã đơn dạng B{chi nhánh}-{yyMMdd}-{số thứ tự}\", () => pm.expect(o.code).to.match(/^B\\d+-\\d{6}-\\d{4}$/));",
+                  "pm.test(\"Giá & tên lấy từ menu, không lấy từ client\", () => {",
+                  "    const pho = o.items.find(i => i.menuItemId == pm.collectionVariables.get(\"phoId\"));",
+                  "    pm.expect(pho.itemName).to.eql(\"Phở bò\");",
+                  "    pm.expect(pho.unitPrice).to.eql(60000);",
+                  "    pm.expect(pho.amount).to.eql(120000);",
+                  "});",
+                  "pm.test(\"Tạm tính 2 x 60.000 + 5.000 = 125.000\", () => pm.expect(o.subtotal).to.eql(125000));",
+                  "pm.test(\"VAT 8% = 10.000, tổng 135.000\", () => {",
+                  "    pm.expect(o.vatAmount).to.eql(10000);",
+                  "    pm.expect(o.totalAmount).to.eql(135000);",
+                  "});",
+                  "pm.test(\"Món ở trạng thái chờ bếp\", () => o.items.forEach(i => pm.expect(i.status).to.eql(\"PENDING\")));",
+                  "pm.collectionVariables.set(\"orderId\", o.id);",
+                  "pm.collectionVariables.set(\"orderCode\", o.code);",
+                  "pm.collectionVariables.set(\"phoItemId\", o.items.find(i => i.menuItemId == pm.collectionVariables.get(\"phoId\")).id);",
+                  "pm.collectionVariables.set(\"teaItemId\", o.items.find(i => i.menuItemId == pm.collectionVariables.get(\"teaId\")).id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"DINE_IN\",\n  \"tableId\": {{table1}},\n  \"items\": [\n    { \"menuItemId\": {{phoId}}, \"quantity\": 2, \"unitPrice\": 1 },\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            },
+            "description": "Giá luôn lấy từ menu: client gửi unitPrice=1 nhưng bị bỏ qua. CN01 bán phở 60.000 (giá riêng chi nhánh)."
+          }
+        },
+        {
+          "name": "Bàn chuyển sang có khách",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.response.json().find(t => t.id == pm.collectionVariables.get(\"table1\"));",
+                  "pm.test(\"OCCUPIED\", () => pm.expect(t.status).to.eql(\"OCCUPIED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/tables"
+          }
+        },
+        {
+          "name": "Hoàn tất khi bếp chưa nấu → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_STATE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{orderId}}/complete"
+          }
+        },
+        {
+          "name": "Hàng đợi bếp CN01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const queue = pm.response.json();",
+                  "const pho = queue.find(t => t.itemId == pm.collectionVariables.get(\"phoItemId\"));",
+                  "pm.test(\"Món phở có trong hàng đợi, kèm mã đơn & bàn\", () => {",
+                  "    pm.expect(pho.status).to.eql(\"PENDING\");",
+                  "    pm.expect(pho.orderCode).to.eql(pm.collectionVariables.get(\"orderCode\"));",
+                  "    pm.expect(pho.tableId).to.eql(Number(pm.collectionVariables.get(\"table1\")));",
+                  "});",
+                  "pm.test(\"Món gọi trước đứng trước\", () => {",
+                  "    const times = queue.map(t => t.orderedAt);",
+                  "    pm.expect(times).to.eql([...times].sort());",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/branches/{{branch1}}/queue"
+          }
+        },
+        {
+          "name": "Phục vụ không được nhận nấu → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{phoItemId}}/start"
+          }
+        },
+        {
+          "name": "Đầu bếp nhận nấu phở",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 COOKING\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"COOKING\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{phoItemId}}/start"
+          }
+        },
+        {
+          "name": "Kho tự trừ theo công thức (2 phở: 0,4kg bánh phở + 0,2kg bò)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const before = JSON.parse(pm.collectionVariables.get(\"stockBefore\"));",
+                  "const drops = pm.response.json()",
+                  "    .map(i => Math.round((before[i.ingredientId] - i.quantity) * 1000) / 1000)",
+                  "    .filter(d => d !== 0)",
+                  "    .sort();",
+                  "pm.test(\"Giảm đúng 0.2 và 0.4\", () => pm.expect(drops).to.eql([0.2, 0.4]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/inventory/branch/{{branch1}}"
+          }
+        },
+        {
+          "name": "Nhận lại món đã có người nấu → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_STATE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{phoItemId}}/start",
+            "description": "Hai đầu bếp bấm cùng một món: chỉ một người nhận được."
+          }
+        },
+        {
+          "name": "Bưng ra khi chưa nấu xong → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_STATE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{phoItemId}}/served"
+          }
+        },
+        {
+          "name": "Phở nấu xong",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 READY\", () => pm.expect(pm.response.json().status).to.eql(\"READY\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{phoItemId}}/ready"
+          }
+        },
+        {
+          "name": "Phục vụ bưng phở",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 SERVED\", () => pm.expect(pm.response.json().status).to.eql(\"SERVED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{phoItemId}}/served"
+          }
+        },
+        {
+          "name": "Trà đá: nhận",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{teaItemId}}/start"
+          }
+        },
+        {
+          "name": "Trà đá: xong",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{teaItemId}}/ready"
+          }
+        },
+        {
+          "name": "Trà đá: bưng",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{teaItemId}}/served"
+          }
+        },
+        {
+          "name": "Hoàn tất khi chưa thu tiền → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ORDER_NOT_PAID\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"ORDER_NOT_PAID\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{orderId}}/complete"
+          }
+        },
+        {
+          "name": "Chuyển khoản → 400 (chỉ nhận tiền mặt)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 PAYMENT_METHOD_NOT_SUPPORTED\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"PAYMENT_METHOD_NOT_SUPPORTED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{orderId}},\n  \"paymentMethod\": \"BANK_TRANSFER\",\n  \"cashReceived\": 125000\n}"
+            }
+          }
+        },
+        {
+          "name": "Khách đưa thiếu tiền → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 INSUFFICIENT_CASH\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INSUFFICIENT_CASH\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{orderId}},\n  \"cashReceived\": 100000\n}"
+            }
+          }
+        },
+        {
+          "name": "Phục vụ không được thu tiền → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{orderId}},\n  \"cashReceived\": 200000\n}"
+            }
+          }
+        },
+        {
+          "name": "Khách đưa 200.000 → thối 65.000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"Tiền mặt, giữ 135.000, thối 65.000\", () => {",
+                  "    pm.expect(p.method).to.eql(\"CASH\");",
+                  "    pm.expect(p.amount).to.eql(135000);",
+                  "    pm.expect(p.cashReceived).to.eql(200000);",
+                  "    pm.expect(p.changeAmount).to.eql(65000);",
+                  "});",
+                  "pm.collectionVariables.set(\"paymentId\", p.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{orderId}},\n  \"cashReceived\": 200000\n}"
+            }
+          }
+        },
+        {
+          "name": "Thu tiền lần 2 → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 ALREADY_PAID\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"ALREADY_PAID\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{orderId}},\n  \"cashReceived\": 200000\n}"
+            }
+          }
+        },
+        {
+          "name": "Hoàn tất đơn",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 COMPLETED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"COMPLETED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{orderId}}/complete"
+          }
+        },
+        {
+          "name": "Bàn trống trở lại",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const t = pm.response.json().find(t => t.id == pm.collectionVariables.get(\"table1\"));",
+                  "pm.test(\"AVAILABLE\", () => pm.expect(t.status).to.eql(\"AVAILABLE\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/tables"
+          }
+        },
+        {
+          "name": "Huỷ đơn đã hoàn tất → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_STATE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{orderId}}/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Huỷ đơn & hoàn tiền (CN01)",
+      "description": "",
+      "item": [
+        {
+          "name": "Tạo đơn mang đi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"cancelOrderId\", pm.response.json().id);",
+                  "pm.collectionVariables.set(\"cancelItemId\", pm.response.json().items[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{comId}}, \"quantity\": 2 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Khách trả trước 100.000 (đơn 97.200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201, thối 2.800\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().amount).to.eql(97200);",
+                  "    pm.expect(pm.response.json().changeAmount).to.eql(2800);",
+                  "});",
+                  "pm.collectionVariables.set(\"cancelPaymentId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{cancelOrderId}},\n  \"cashReceived\": 100000\n}"
+            }
+          }
+        },
+        {
+          "name": "Huỷ đơn đã thu tiền → 409 (phải hoàn tiền trước)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_STATE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{cancelOrderId}}/cancel"
+          }
+        },
+        {
+          "name": "Thu ngân tự hoàn tiền → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/{{cancelPaymentId}}/refund"
+          }
+        },
+        {
+          "name": "Quản lý hoàn tiền",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 REFUNDED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"REFUNDED\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/payments/{{cancelPaymentId}}/refund"
+          }
+        },
+        {
+          "name": "Huỷ đơn",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 CANCELLED\", () => pm.expect(pm.response.json().status).to.eql(\"CANCELLED\"));",
+                  "pm.test(\"Món cũng bị huỷ\", () => pm.response.json().items.forEach(i => pm.expect(i.status).to.eql(\"CANCELLED\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{cancelOrderId}}/cancel"
+          }
+        },
+        {
+          "name": "Món đã huỷ biến khỏi hàng đợi bếp",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Không còn trong hàng đợi\", () => {",
+                  "    const ids = pm.response.json().map(t => t.itemId);",
+                  "    pm.expect(ids).to.not.include(Number(pm.collectionVariables.get(\"cancelItemId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/branches/{{branch1}}/queue"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Quy tắc đặt món & lỗi rõ ràng",
+      "description": "",
+      "item": [
+        {
+          "name": "Món hết ở CN02 (Lẩu Thái) → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 MENU_ITEM_UNAVAILABLE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"MENU_ITEM_UNAVAILABLE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch2}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{lauId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "CN02 vẫn bán phở giá gốc 55.000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Giá gốc của chuỗi 55.000 + VAT = 59.400\", () => pm.expect(pm.response.json().totalAmount).to.eql(59400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch2}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{phoId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Thu ngân CN01 đặt cho CN02 → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch2}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Bàn của chi nhánh khác → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 INVALID_REQUEST\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_REQUEST\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"DINE_IN\",\n  \"tableId\": {{table9}},\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Đơn tại bàn thiếu số bàn → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 INVALID_REQUEST\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_REQUEST\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"DINE_IN\",\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Số lượng 0 → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 VALIDATION_ERROR\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 0 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Món không tồn tại → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 MENU_ITEM_UNAVAILABLE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"MENU_ITEM_UNAVAILABLE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": 999999, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Đơn không tồn tại → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/999999"
+          }
+        },
+        {
+          "name": "Chi nhánh không tồn tại → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 BRANCH_NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"BRANCH_NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/999999"
+          }
+        },
+        {
+          "name": "Đường dẫn không tồn tại → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"404 NOT_FOUND\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/khong-co"
+          }
+        },
+        {
+          "name": "Id sai kiểu → 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 INVALID_REQUEST\", () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_REQUEST\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/abc"
+          }
+        },
+        {
+          "name": "Refresh token rác → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"abc\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Giờ cao điểm: bếp CN09 quá tải",
+      "description": "Ép bếp CN09 đầy để thấy hệ thống tự tạm dừng đơn mang đi/giao hàng nhưng vẫn phục vụ khách tại bàn, rồi trả lại như cũ.",
+      "item": [
+        {
+          "name": "Tải bếp hiện tại CN09",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const l = pm.response.json();",
+                  "pm.collectionVariables.set(\"activeBefore\", l.pendingPortions + l.cookingPortions);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/branches/{{branch9}}/load"
+          }
+        },
+        {
+          "name": "Lấy thông tin CN09",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set(\"branch9Body\", JSON.stringify({",
+                  "    name: b.name, address: b.address, city: b.city, phone: b.phone,",
+                  "    openTime: b.openTime, closeTime: b.closeTime, managerId: b.managerId",
+                  "}));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch9}}"
+          }
+        },
+        {
+          "name": "Giả lập bếp nhỏ: sức chứa = hiện tại + 3 phần",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = JSON.parse(pm.collectionVariables.get(\"branch9Body\"));",
+                  "body.kitchenCapacity = Number(pm.collectionVariables.get(\"activeBefore\")) + 3;",
+                  "pm.collectionVariables.set(\"branch9Payload\", JSON.stringify(body));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Đã đặt sức chứa bếp\", () =>",
+                  "    pm.expect(pm.response.json().kitchenCapacity).to.eql(Number(pm.collectionVariables.get(\"activeBefore\")) + 3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch9}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{{branch9Payload}}"
+            }
+          }
+        },
+        {
+          "name": "Khách tại bàn gọi 3 phở → bếp đầy 100%",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch9}},\n  \"orderType\": \"DINE_IN\",\n  \"tableId\": {{table9}},\n  \"items\": [\n    { \"menuItemId\": {{phoId}}, \"quantity\": 3 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Tải bếp: OVERLOADED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const l = pm.response.json();",
+                  "pm.test(\"Quá tải, tạm dừng mang đi\", () => {",
+                  "    pm.expect(l.loadPercent).to.be.at.least(100);",
+                  "    pm.expect(l.status).to.eql(\"OVERLOADED\");",
+                  "    pm.expect(l.acceptingTakeaway).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/branches/{{branch9}}/load"
+          }
+        },
+        {
+          "name": "Đơn mang đi → 503 BRANCH_BUSY",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"503 BRANCH_BUSY\", () => {",
+                  "    pm.response.to.have.status(503);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"BRANCH_BUSY\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch9}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Đơn giao hàng → 503 BRANCH_BUSY",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"503 BRANCH_BUSY\", () => {",
+                  "    pm.response.to.have.status(503);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"BRANCH_BUSY\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch9}},\n  \"orderType\": \"DELIVERY\",\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Khách tại bàn vẫn được phục vụ → 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch9}},\n  \"orderType\": \"DINE_IN\",\n  \"tableId\": {{table9b}},\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Dashboard thấy CN09 quá tải",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const cn09 = pm.response.json().branches.find(b => b.branchId == pm.collectionVariables.get(\"branch9\"));",
+                  "pm.test(\"CN09 OVERLOADED\", () => pm.expect(cn09.kitchen.status).to.eql(\"OVERLOADED\"));",
+                  "pm.test(\"Đếm chi nhánh quá tải\", () => pm.expect(pm.response.json().overloadedBranches).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/dashboard/chain"
+          }
+        },
+        {
+          "name": "Trả lại sức chứa mặc định",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, dùng sức chứa mặc định\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().kitchenCapacity ?? null).to.eql(null);  // null fields are omitted from JSON",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch9}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{{branch9Body}}"
+            }
+          }
+        },
+        {
+          "name": "Hết quá tải → nhận lại đơn mang đi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch9}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{teaId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Dashboard toàn chuỗi",
+      "description": "",
+      "item": [
+        {
+          "name": "Chủ chuỗi xem tổng quan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json();",
+                  "pm.test(\"Có đủ 9 chi nhánh\", () => pm.expect(d.branches.length).to.be.at.least(9));",
+                  "const cn01 = d.branches.find(b => b.branchId == pm.collectionVariables.get(\"branch1\"));",
+                  "pm.test(\"CN01 có đơn hoàn tất & doanh thu tiền mặt hôm nay\", () => {",
+                  "    pm.expect(cn01.completedOrdersToday).to.be.at.least(1);",
+                  "    pm.expect(cn01.revenueToday).to.be.at.least(135000);",
+                  "});",
+                  "pm.test(\"Mỗi chi nhánh có số liệu bếp\", () => d.branches.forEach(b => {",
+                  "    pm.expect(b.kitchen).to.have.property(\"loadPercent\");",
+                  "    pm.expect([\"NORMAL\", \"BUSY\", \"OVERLOADED\"]).to.include(b.kitchen.status);",
+                  "}));",
+                  "pm.test(\"Tổng doanh thu = tổng các chi nhánh\", () => {",
+                  "    const sum = d.branches.reduce((s, b) => s + b.revenueToday, 0);",
+                  "    pm.expect(d.revenueToday).to.eql(sum);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/dashboard/chain"
+          }
+        },
+        {
+          "name": "Quản lý chi nhánh không xem được → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/dashboard/chain"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Phân quyền nhân viên & chi nhánh",
+      "description": "",
+      "item": [
+        {
+          "name": "Phục vụ tự tạo tài khoản ADMIN → 403",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = Date.now();",
+                  "pm.collectionVariables.set(\"newStaffAdmin\", JSON.stringify({",
+                  "    code: \"H\" + n % 1000000, fullName: \"Hacker\", username: \"hacker\" + n, email: \"hacker\" + n + \"@dinechain.vn\",",
+                  "    phone: \"0900000000\", role: \"ADMIN\", branchId: Number(pm.collectionVariables.get(\"branch1\")),",
+                  "    hourlyRate: 1, password: \"Hacker@123\"",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/staff",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newStaffAdmin}}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý tạo ADMIN → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/staff",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newStaffAdmin}}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý tạo thu ngân cho chi nhánh mình",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = Date.now();",
+                  "pm.collectionVariables.set(\"newCashierUsername\", \"tn\" + n);",
+                  "pm.collectionVariables.set(\"newCashier\", JSON.stringify({",
+                  "    code: \"TN\" + n % 1000000, fullName: \"Thu ngân mới\", username: \"tn\" + n, email: \"tn\" + n + \"@dinechain.vn\",",
+                  "    phone: \"0911111111\", role: \"CASHIER\", branchId: Number(pm.collectionVariables.get(\"branch1\")),",
+                  "    hourlyRate: 30000, password: \"Welcome@123\"",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"newCashierId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/staff",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newCashier}}"
+            }
+          }
+        },
+        {
+          "name": "Mật khẩu mặc định cũ không còn dùng được → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newCashierUsername}}\",\n  \"password\": \"DefaultPassword@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Nhân viên mới đăng nhập bằng mật khẩu quản lý đặt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenNewCashier\", pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{newCashierUsername}}\",\n  \"password\": \"Welcome@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý cho nhân viên nghỉ việc",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/staff/{{newCashierId}}"
+          }
+        },
+        {
+          "name": "Token của người đã nghỉ bị từ chối ngay → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenNewCashier}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches"
+          }
+        },
+        {
+          "name": "Phục vụ xoá chi nhánh → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch2}}"
+          }
+        },
+        {
+          "name": "Quản lý CN01 sửa CN02 → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch2}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"X\",\n  \"address\": \"X\",\n  \"city\": \"X\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý sửa menu chung → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/menu-items/{{phoId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Kho & đặt bàn",
+      "description": "",
+      "item": [
+        {
+          "name": "CN03 sắp hết thịt bò",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Chỉ 1 nguyên liệu dưới mức tối thiểu\", () => {",
+                  "    pm.expect(pm.response.json().length).to.eql(1);",
+                  "    pm.expect(pm.response.json()[0].quantity).to.be.below(3);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              }
+            ],
+            "url": "{{baseUrl}}/inventory/branch/{{branch3}}/low-stock"
+          }
+        },
+        {
+          "name": "Phục vụ xem kho → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/inventory/branch/{{branch1}}"
+          }
+        },
+        {
+          "name": "Tạo khách hàng",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"newCustomer\", JSON.stringify({",
+                  "    fullName: \"Nguyễn Văn A\", phone: \"09\" + String(Date.now()).slice(-8)",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"customerId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/customers",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newCustomer}}"
+            }
+          }
+        },
+        {
+          "name": "Đặt bàn tối mai cho 6 người",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const tomorrow = new Date(Date.now() + 24 * 3600 * 1000);",
+                  "tomorrow.setHours(19, 0, 0, 0);",
+                  "const pad = n => String(n).padStart(2, \"0\");",
+                  "const local = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth() + 1)}-${pad(tomorrow.getDate())}T19:00:00`;",
+                  "pm.collectionVariables.set(\"newReservation\", JSON.stringify({",
+                  "    branchId: Number(pm.collectionVariables.get(\"branch1\")),",
+                  "    customerId: Number(pm.collectionVariables.get(\"customerId\")),",
+                  "    reservationDate: local, numberOfGuests: 6, notes: \"Sinh nhật\"",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 PENDING\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"PENDING\");",
+                  "    pm.expect(pm.response.json().numberOfGuests).to.eql(6);",
+                  "});",
+                  "pm.collectionVariables.set(\"reservationId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/reservations",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newReservation}}"
+            }
+          }
+        },
+        {
+          "name": "Xác nhận đặt bàn",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"CONFIRMED\", () => pm.expect(pm.response.json().status).to.eql(\"CONFIRMED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reservations/{{reservationId}}/confirm"
+          }
+        },
+        {
+          "name": "Xác nhận lần 2 → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 INVALID_STATE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"INVALID_STATE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reservations/{{reservationId}}/confirm"
+          }
+        },
+        {
+          "name": "Chi nhánh khác không xem được → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier9}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reservations/{{reservationId}}"
+          }
+        },
+        {
+          "name": "Huỷ đặt bàn",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"CANCELLED\", () => pm.expect(pm.response.json().status).to.eql(\"CANCELLED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reservations/{{reservationId}}/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Khuyến mãi + tích điểm + VAT (CN01)",
+      "description": "",
+      "item": [
+        {
+          "name": "Chủ chuỗi tạo mã giảm 10% (tối đa 20.000)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const code = \"PM\" + Date.now();",
+                  "pm.collectionVariables.set(\"promoCode\", code);",
+                  "const now = new Date();",
+                  "const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 19);",
+                  "pm.collectionVariables.set(\"newPromo\", JSON.stringify({",
+                  "    code: code, name: \"Giảm 10%\", discountType: \"PERCENT\", discountValue: 10, maxDiscount: 20000,",
+                  "    startAt: iso(new Date(now.getTime() - 3600000)), endAt: iso(new Date(now.getTime() + 7 * 86400000))",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Áp cho cả chuỗi\", () => pm.expect(pm.response.json().branchIds).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenOwner}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/promotions",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newPromo}}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý tạo mã → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/promotions",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newPromo}}"
+            }
+          }
+        },
+        {
+          "name": "Thu ngân thử mã cho đơn 150.000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Giảm 15.000\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().discount).to.eql(15000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/promotions/check?code={{promoCode}}&branchId={{branch1}}&orderAmount=150000"
+          }
+        },
+        {
+          "name": "Mã không tồn tại → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 PROMOTION_NOT_APPLICABLE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"PROMOTION_NOT_APPLICABLE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/promotions/check?code=KHONGCO&branchId={{branch1}}&orderAmount=150000"
+          }
+        },
+        {
+          "name": "Tạo khách hàng tích điểm",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const phone = \"08\" + String(Date.now()).slice(-8);",
+                  "pm.collectionVariables.set(\"loyalPhone\", phone);",
+                  "pm.collectionVariables.set(\"loyalCustomer\", JSON.stringify({ fullName: \"Khách tích điểm\", phone: phone }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201, 0 điểm\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().points).to.eql(0);",
+                  "});",
+                  "pm.collectionVariables.set(\"loyalCustomerId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/customers",
+            "body": {
+              "mode": "raw",
+              "raw": "{{loyalCustomer}}"
+            }
+          }
+        },
+        {
+          "name": "Đơn 2 phở + mã giảm + khách",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"120.000 - 12.000 = 108.000, VAT 8.640, tổng 116.640\", () => {",
+                  "    pm.expect(o.subtotal).to.eql(120000);",
+                  "    pm.expect(o.discountAmount).to.eql(12000);",
+                  "    pm.expect(o.vatAmount).to.eql(8640);",
+                  "    pm.expect(o.totalAmount).to.eql(116640);",
+                  "});",
+                  "pm.collectionVariables.set(\"loyalOrderId\", o.id);",
+                  "pm.collectionVariables.set(\"loyalItemId\", o.items[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"customerId\": {{loyalCustomerId}},\n  \"promotionCode\": \"{{promoCode}}\",\n  \"items\": [ { \"menuItemId\": {{phoId}}, \"quantity\": 2 } ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Phở: nhận",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{loyalItemId}}/start"
+          }
+        },
+        {
+          "name": "Phở: xong",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{loyalItemId}}/ready"
+          }
+        },
+        {
+          "name": "Phở: bưng",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{loyalItemId}}/served"
+          }
+        },
+        {
+          "name": "Thu 120.000 → thối 3.360",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Thối 3.360\", () => pm.expect(pm.response.json().changeAmount).to.eql(3360));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": {{loyalOrderId}},\n  \"cashReceived\": 120000\n}"
+            }
+          }
+        },
+        {
+          "name": "Hoàn tất → khách được 11 điểm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{loyalOrderId}}/complete"
+          }
+        },
+        {
+          "name": "Tra khách theo SĐT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"11 điểm (116.640 / 10.000), đã chi 116.640\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().points).to.eql(11);",
+                  "    pm.expect(pm.response.json().totalSpent).to.eql(116640);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/customers/by-phone?phone={{loyalPhone}}"
+          }
+        },
+        {
+          "name": "Dùng nhiều điểm hơn đang có → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 NOT_ENOUGH_POINTS\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"NOT_ENOUGH_POINTS\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"customerId\": {{loyalCustomerId}},\n  \"pointsToUse\": 50,\n  \"items\": [ { \"menuItemId\": {{phoId}}, \"quantity\": 1 } ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Dùng 10 điểm cho 1 phở",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "const o = pm.response.json();",
+                  "pm.test(\"60.000 - 10.000 điểm = 50.000, VAT 4.000, tổng 54.000\", () => {",
+                  "    pm.expect(o.pointsUsed).to.eql(10);",
+                  "    pm.expect(o.pointsDiscount).to.eql(10000);",
+                  "    pm.expect(o.totalAmount).to.eql(54000);",
+                  "});",
+                  "pm.collectionVariables.set(\"pointsOrderId\", o.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"customerId\": {{loyalCustomerId}},\n  \"pointsToUse\": 10,\n  \"items\": [ { \"menuItemId\": {{phoId}}, \"quantity\": 1 } ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Còn 1 điểm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"1 điểm\", () => pm.expect(pm.response.json().points).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/customers/by-phone?phone={{loyalPhone}}"
+          }
+        },
+        {
+          "name": "Huỷ đơn → trả lại 10 điểm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{pointsOrderId}}/cancel"
+          }
+        },
+        {
+          "name": "Lịch sử điểm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"+11, -10, +10\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().map(t => t.points)).to.eql([10, -10, 11]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/customers/{{loyalCustomerId}}/points"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Ca làm việc & chấm công (CN01)",
+      "description": "",
+      "item": [
+        {
+          "name": "Phục vụ tạo ca → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/shifts",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"X\",\n  \"startTime\": \"07:00\",\n  \"endTime\": \"15:00\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý tạo ca đang diễn ra",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const start = new Date(Date.now() - 10 * 60000);",
+                  "const end = new Date(start.getTime() + 4 * 3600000);",
+                  "const hm = d => String(d.getHours()).padStart(2, \"0\") + \":\" + String(d.getMinutes()).padStart(2, \"0\");",
+                  "const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, \"0\")}-${String(d.getDate()).padStart(2, \"0\")}`;",
+                  "pm.collectionVariables.set(\"shiftDate\", ymd(start));",
+                  "pm.collectionVariables.set(\"newShift\", JSON.stringify({ name: \"Ca test \" + hm(start), startTime: hm(start), endTime: hm(end) }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"shiftId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/shifts",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newShift}}"
+            }
+          }
+        },
+        {
+          "name": "Xếp phục vụ 1 vào ca",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"assignmentId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/shifts/{{shiftId}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staffId\": {{tokenWaiter1Id}},\n  \"workDate\": \"{{shiftDate}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Xếp trùng → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/shifts/{{shiftId}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"staffId\": {{tokenWaiter1Id}},\n  \"workDate\": \"{{shiftDate}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Chấm công hộ người khác → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/shift-assignments/{{assignmentId}}/check-in"
+          }
+        },
+        {
+          "name": "Phục vụ chấm công vào",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, có giờ vào\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().checkInAt).to.be.a(\"string\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/shift-assignments/{{assignmentId}}/check-in"
+          }
+        },
+        {
+          "name": "Bỏ xếp ca khi đã vào ca → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/shift-assignments/{{assignmentId}}"
+          }
+        },
+        {
+          "name": "Phục vụ chấm công ra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, có số phút làm\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().workedMinutes).to.be.a(\"number\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/shift-assignments/{{assignmentId}}/check-out"
+          }
+        },
+        {
+          "name": "Lịch của tôi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Có ca vừa làm\", () => pm.expect(pm.response.json().map(a => a.id)).to.include(Number(pm.collectionVariables.get(\"assignmentId\"))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/shifts/me?from={{shiftDate}}&to={{shiftDate}}"
+          }
+        },
+        {
+          "name": "Bảng công chi nhánh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const row = pm.response.json().find(r => r.staffId == pm.collectionVariables.get(\"tokenWaiter1Id\"));",
+                  "pm.test(\"Phục vụ 1 có ít nhất 1 ca đã làm\", () => pm.expect(row.shiftsWorked).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/timesheet?from={{shiftDate}}&to={{shiftDate}}"
+          }
+        },
+        {
+          "name": "Phục vụ xem bảng công → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/timesheet?from={{shiftDate}}&to={{shiftDate}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Nhập hàng (CN01)",
+      "description": "",
+      "item": [
+        {
+          "name": "Danh sách nguyên liệu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"beefId\", pm.response.json().find(i => i.code === \"THIT-BO\").id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/ingredients"
+          }
+        },
+        {
+          "name": "Tồn thịt bò trước khi nhập",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"beefBefore\", pm.response.json().quantity);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/inventory/branch/{{branch1}}/ingredient/{{beefId}}"
+          }
+        },
+        {
+          "name": "Thêm nhà cung cấp",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"newSupplier\", JSON.stringify({ name: \"NCC thịt bò \" + Date.now(), phone: \"0243999000\" }));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"supplierId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/suppliers",
+            "body": {
+              "mode": "raw",
+              "raw": "{{newSupplier}}"
+            }
+          }
+        },
+        {
+          "name": "Đầu bếp lập phiếu nhập → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/purchase-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"supplierId\": {{supplierId}},\n  \"items\": [ { \"ingredientId\": {{beefId}}, \"quantity\": 5, \"unitPrice\": 250000 } ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Lập phiếu nhập 5kg bò",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201 DRAFT\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"DRAFT\");",
+                  "});",
+                  "pm.test(\"Mã PN, tổng 1.250.000\", () => {",
+                  "    pm.expect(pm.response.json().code).to.match(/^PN\\d+-\\d{6}-\\d{4}$/);",
+                  "    pm.expect(pm.response.json().totalAmount).to.eql(1250000);",
+                  "});",
+                  "pm.collectionVariables.set(\"poId\", pm.response.json().id);",
+                  "pm.collectionVariables.set(\"poItemId\", pm.response.json().items[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/purchase-orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"supplierId\": {{supplierId}},\n  \"note\": \"Nhập cho cuối tuần\",\n  \"items\": [ { \"ingredientId\": {{beefId}}, \"quantity\": 5, \"unitPrice\": 250000 } ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Nhận hàng khi chưa đặt → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/purchase-orders/{{poId}}/receive"
+          }
+        },
+        {
+          "name": "Duyệt & đặt hàng",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"ORDERED\", () => pm.expect(pm.response.json().status).to.eql(\"ORDERED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/purchase-orders/{{poId}}/order"
+          }
+        },
+        {
+          "name": "Nhận hàng: chỉ về 4kg",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"RECEIVED, tính tiền theo hàng thực nhận 1.000.000\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().status).to.eql(\"RECEIVED\");",
+                  "    pm.expect(pm.response.json().totalAmount).to.eql(1000000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/purchase-orders/{{poId}}/receive",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [ { \"itemId\": {{poItemId}}, \"receivedQuantity\": 4 } ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Kho tăng đúng 4kg",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const before = Number(pm.collectionVariables.get(\"beefBefore\"));",
+                  "pm.test(\"+4\", () => pm.expect(Math.round((pm.response.json().quantity - before) * 1000) / 1000).to.eql(4));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/inventory/branch/{{branch1}}/ingredient/{{beefId}}"
+          }
+        },
+        {
+          "name": "Nhận lại lần 2 → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/purchase-orders/{{poId}}/receive"
+          }
+        },
+        {
+          "name": "Phiếu nhập của CN01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Có phiếu vừa nhận\", () => pm.expect(pm.response.json().map(p => p.id)).to.include(Number(pm.collectionVariables.get(\"poId\"))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/purchase-orders/branch/{{branch1}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Gọi thêm / huỷ món, menu chi nhánh, đặt lại mật khẩu (CN01)",
+      "description": "",
+      "item": [
+        {
+          "name": "Menu CN01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "const pho = pm.response.json().find(m => m.menuItemId == pm.collectionVariables.get(\"phoId\"));",
+                  "pm.test(\"Phở ở CN01 giá riêng 60.000 (giá chuỗi 55.000)\", () => {",
+                  "    pm.expect(pho.price).to.eql(60000);",
+                  "    pm.expect(pho.basePrice).to.eql(55000);",
+                  "    pm.expect(pho.available).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/menu"
+          }
+        },
+        {
+          "name": "Bếp báo hết cơm rang",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, hết món\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().available).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/menu/{{comId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"available\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Gọi cơm rang khi đã hết → 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"409 MENU_ITEM_UNAVAILABLE\", () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().code).to.eql(\"MENU_ITEM_UNAVAILABLE\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{comId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Bếp báo có cơm rang lại",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/menu/{{comId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"available\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Bếp đổi giá → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/menu/{{comId}}/price",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 50000\n}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý đặt giá cơm rang CN01 = 50.000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Giá mới 50.000\", () => pm.expect(pm.response.json().price).to.eql(50000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/menu/{{comId}}/price",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 50000\n}"
+            }
+          }
+        },
+        {
+          "name": "Đơn cơm rang theo giá mới",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"50.000 + VAT = 54.000\", () => pm.expect(pm.response.json().totalAmount).to.eql(54000));",
+                  "pm.collectionVariables.set(\"comOrderId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"TAKEAWAY\",\n  \"items\": [\n    { \"menuItemId\": {{comId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Huỷ đơn cơm rang thử giá",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{comOrderId}}/cancel"
+          }
+        },
+        {
+          "name": "Quản lý trả về giá chung",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Về 45.000\", () => pm.expect(pm.response.json().price).to.eql(45000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branch1}}/menu/{{comId}}/price",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": null\n}"
+            }
+          }
+        },
+        {
+          "name": "Khách ngồi bàn gọi 1 phở",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"editOrderId\", pm.response.json().id);",
+                  "pm.collectionVariables.set(\"editPhoItemId\", pm.response.json().items[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": {{branch1}},\n  \"orderType\": \"DINE_IN\",\n  \"tableId\": {{table1b}},\n  \"items\": [\n    { \"menuItemId\": {{phoId}}, \"quantity\": 1 }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Gọi thêm 2 trà đá",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, 2 dòng món\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().items.length).to.eql(2);",
+                  "});",
+                  "pm.test(\"60.000 + 10.000 = 70.000, có VAT 75.600\", () => {",
+                  "    pm.expect(pm.response.json().subtotal).to.eql(70000);",
+                  "    pm.expect(pm.response.json().totalAmount).to.eql(75600);",
+                  "});",
+                  "pm.collectionVariables.set(\"editTeaItemId\", pm.response.json().items.find(i => i.menuItemId == pm.collectionVariables.get(\"teaId\")).id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{editOrderId}}/items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [ { \"menuItemId\": {{teaId}}, \"quantity\": 2 } ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Khách đổi ý: huỷ trà đá (chưa nấu)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, trà đá CANCELLED\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const tea = pm.response.json().items.find(i => i.id == pm.collectionVariables.get(\"editTeaItemId\"));",
+                  "    pm.expect(tea.status).to.eql(\"CANCELLED\");",
+                  "    pm.expect(tea.cancelReason).to.eql(\"Khách đổi ý\");",
+                  "});",
+                  "pm.test(\"Còn 60.000 + VAT = 64.800\", () => pm.expect(pm.response.json().totalAmount).to.eql(64800));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{editOrderId}}/items/{{editTeaItemId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Khách đổi ý\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Bếp bắt đầu nấu phở",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenChef1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/kitchen/items/{{editPhoItemId}}/start"
+          }
+        },
+        {
+          "name": "Phục vụ huỷ phở đang nấu → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{editOrderId}}/items/{{editPhoItemId}}/cancel"
+          }
+        },
+        {
+          "name": "Quản lý huỷ phở đang nấu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200, tổng 0\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().totalAmount).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{editOrderId}}/items/{{editPhoItemId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Ra nhầm món\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Huỷ đơn trống để trả bàn",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCashier1}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/{{editOrderId}}/cancel"
+          }
+        },
+        {
+          "name": "Quản lý tạo thu ngân",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = Date.now();",
+                  "pm.collectionVariables.set(\"resetUsername\", \"rs\" + n);",
+                  "pm.collectionVariables.set(\"resetCashier\", JSON.stringify({",
+                  "    code: \"RS\" + n % 1000000, fullName: \"Thu ngân quên mật khẩu\", username: \"rs\" + n, email: \"rs\" + n + \"@dinechain.vn\",",
+                  "    phone: \"0922222222\", role: \"CASHIER\", branchId: Number(pm.collectionVariables.get(\"branch1\")),",
+                  "    hourlyRate: 30000, password: \"Welcome@123\"",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"resetStaffId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/staff",
+            "body": {
+              "mode": "raw",
+              "raw": "{{resetCashier}}"
+            }
+          }
+        },
+        {
+          "name": "Thu ngân đăng nhập (giữ refresh token cũ)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"oldRefreshToken\", pm.response.json().refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{resetUsername}}\",\n  \"password\": \"Welcome@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Phục vụ đặt lại mật khẩu → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenWaiter1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/staff/{{resetStaffId}}/password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"Moi@12345\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Quản lý đặt lại mật khẩu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenManager1}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/staff/{{resetStaffId}}/password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"Moi@12345\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Mật khẩu cũ → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{resetUsername}}\",\n  \"password\": \"Welcome@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Mật khẩu mới → 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{resetUsername}}\",\n  \"password\": \"Moi@12345\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Phiên cũ bị thu hồi → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{oldRefreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    }
+  ]
+}

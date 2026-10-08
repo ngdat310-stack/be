@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 public class JwtProperties {
-    private String secretKey;
+    private String secretKey; // Fallback for HMAC (deprecated, use RSA)
+    private String privateKeyPath = "private_key.pem";
+    private String publicKeyPath = "public_key.pem";
     private Long accessTokenExpiration; // seconds
     private Long refreshTokenExpiration; // seconds
 }

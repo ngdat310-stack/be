@@ -2,6 +2,7 @@ package com.dinechain.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,4 +32,7 @@ public class UpdateBranchRequest {
     private LocalDateTime closeTime;
 
     private Integer managerId;
+
+    @Positive(message = "Kitchen capacity must be positive")
+    private Integer kitchenCapacity;
 }

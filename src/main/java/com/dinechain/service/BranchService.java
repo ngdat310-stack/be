@@ -9,7 +9,7 @@ import java.util.List;
 public interface BranchService {
     BranchResponse createBranch(CreateBranchRequest request);
     BranchResponse getBranch(Integer branchId);
-    BranchResponse updateBranch(Integer branchId, UpdateBranchRequest request);
+    BranchResponse updateBranch(Integer staffId, Integer branchId, UpdateBranchRequest request);
     void deleteBranch(Integer branchId);
     List<BranchResponse> getAllBranches();
     List<BranchResponse> searchBranches(String name);

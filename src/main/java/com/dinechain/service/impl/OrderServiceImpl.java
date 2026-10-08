@@ -1,22 +1,54 @@
 package com.dinechain.service.impl;
 
+import com.dinechain.constant.BranchStatus;
 import com.dinechain.constant.OrderItemStatus;
 import com.dinechain.constant.OrderStatus;
+import com.dinechain.constant.OrderType;
+import com.dinechain.constant.PaymentStatus;
+import com.dinechain.constant.StaffRole;
+import com.dinechain.constant.TableStatus;
+import com.dinechain.dto.request.AddOrderItemsRequest;
 import com.dinechain.dto.request.CreateOrderRequest;
+import com.dinechain.dto.response.BranchLoadResponse;
 import com.dinechain.dto.response.OrderItemResponse;
 import com.dinechain.dto.response.OrderResponse;
+import com.dinechain.entity.BranchEntity;
+import com.dinechain.entity.BranchMenuItemEntity;
+import com.dinechain.entity.MenuItemEntity;
 import com.dinechain.entity.OrderEntity;
 import com.dinechain.entity.OrderItemEntity;
+import com.dinechain.entity.PromotionEntity;
+import com.dinechain.entity.StaffEntity;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
+import com.dinechain.repository.BranchMenuItemRepository;
+import com.dinechain.repository.BranchRepository;
+import com.dinechain.repository.CustomerRepository;
+import com.dinechain.repository.DiningTableRepository;
+import com.dinechain.repository.MenuItemRepository;
 import com.dinechain.repository.OrderItemRepository;
 import com.dinechain.repository.OrderRepository;
+import com.dinechain.repository.PaymentRepository;
+import com.dinechain.repository.StaffRepository;
+import com.dinechain.security.BranchAccessGuard;
+import com.dinechain.service.KitchenService;
+import com.dinechain.service.LoyaltyService;
+import com.dinechain.service.OrderCodeGenerator;
 import com.dinechain.service.OrderService;
+import com.dinechain.service.PromotionService;
+import com.dinechain.service.SettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,107 +56,358 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
+    // Items the kitchen has not handed over yet
+    private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
+
+    private static final List<OrderItemStatus> UNFINISHED_ITEM_STATUSES =
+        List.of(OrderItemStatus.PENDING, OrderItemStatus.COOKING, OrderItemStatus.READY);
+
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final BranchRepository branchRepository;
+    private final MenuItemRepository menuItemRepository;
+    private final BranchMenuItemRepository branchMenuItemRepository;
+    private final BranchAccessGuard branchAccessGuard;
+    private final OrderCodeGenerator orderCodeGenerator;
+    private final KitchenService kitchenService;
+    private final PaymentRepository paymentRepository;
+    private final DiningTableRepository diningTableRepository;
+    private final StaffRepository staffRepository;
+    private final CustomerRepository customerRepository;
+    private final PromotionService promotionService;
+    private final LoyaltyService loyaltyService;
+    private final SettingService settingService;
 
     @Override
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request) {
+    public OrderResponse createOrder(Integer staffId, CreateOrderRequest request) {
+        Integer branchId = request.getBranchId();
+        branchAccessGuard.check(staffId, branchId);
+
+        boolean dineIn = request.getOrderType() == OrderType.DINE_IN;
+        // Takeaway & delivery lock the branch row so concurrent orders cannot all pass the "kitchen full?" check at once
+        BranchEntity branch = (dineIn ? branchRepository.findById(branchId) : branchRepository.findByIdForUpdate(branchId))
+            .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+        if (branch.getStatus() != BranchStatus.ACTIVE) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Branch " + branch.getCode() + " is not active");
+        }
+        if (dineIn && request.getTableId() == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Dine-in order requires a table");
+        }
+        if (dineIn && diningTableRepository.findInBranch(request.getTableId(), branchId).isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Table " + request.getTableId() + " does not belong to this branch");
+        }
+        if (request.getCustomerId() != null && !customerRepository.existsById(request.getCustomerId())) {
+            throw new AppException(ErrorCode.NOT_FOUND, "Customer not found: " + request.getCustomerId());
+        }
+
+        // Peak hours: guests already seated are always served, takeaway & delivery wait until the kitchen catches up
+        if (!dineIn) {
+            checkKitchenAcceptsTakeaway(branch);
+        }
+
+        List<OrderItemEntity> items = buildItems(branchId, request.getItems());
+        BigDecimal subtotal = items.stream().map(OrderItemEntity::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+
         OrderEntity order = new OrderEntity();
-        order.setBranchId(request.getBranchId());
+        order.setCode(orderCodeGenerator.next(branchId));
+        order.setBranchId(branchId);
         order.setType(request.getOrderType());
         order.setTableId(request.getTableId());
         order.setCustomerId(request.getCustomerId());
         order.setStatus(OrderStatus.OPEN);
-        order.setOpenedBy(request.getStaffId() != null ? request.getStaffId() : 1);
-        order.setSubtotal(java.math.BigDecimal.ZERO);
-        order.setDiscountAmount(java.math.BigDecimal.ZERO);
-        order.setTotalAmount(java.math.BigDecimal.ZERO);
+        order.setOpenedBy(staffId);
         order.setNote(request.getNotes());
-
+        applyPricing(order, subtotal, request);
         OrderEntity savedOrder = orderRepository.save(order);
-
-        java.math.BigDecimal totalAmount = java.math.BigDecimal.ZERO;
-        for (CreateOrderRequest.OrderItemRequest itemReq : request.getItems()) {
-            java.math.BigDecimal unitPrice = itemReq.getUnitPrice() != null ?
-                java.math.BigDecimal.valueOf(itemReq.getUnitPrice()) : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal amount = unitPrice.multiply(java.math.BigDecimal.valueOf(itemReq.getQuantity()));
-
-            OrderItemEntity item = new OrderItemEntity();
-            item.setOrderId(savedOrder.getId());
-            item.setMenuItemId(itemReq.getMenuItemId());
-            item.setItemName("Item");
-            item.setUnitPrice(unitPrice);
-            item.setQuantity(itemReq.getQuantity());
-            item.setAmount(amount);
-            item.setStatus(OrderItemStatus.PENDING);
-            item.setNote(itemReq.getNotes());
-            orderItemRepository.save(item);
-            totalAmount = totalAmount.add(amount);
+        if (savedOrder.getPointsUsed() > 0) {
+            loyaltyService.spend(savedOrder.getCustomerId(), savedOrder.getPointsUsed(), savedOrder);
         }
 
-        savedOrder.setSubtotal(totalAmount);
-        savedOrder.setTotalAmount(totalAmount);
-        orderRepository.save(savedOrder);
+        items.forEach(item -> item.setOrderId(savedOrder.getId()));
+        List<OrderItemEntity> savedItems = orderItemRepository.saveAll(items);
+        if (dineIn) {
+            diningTableRepository.updateStatus(savedOrder.getTableId(), TableStatus.OCCUPIED);
+        }
 
-        log.info("Created order: {} for branch: {}", savedOrder.getId(), request.getBranchId());
-        return getOrder(savedOrder.getId());
+        log.info("Created order {} for branch {}", savedOrder.getCode(), branchId);
+        return toResponse(savedOrder, savedItems);
+    }
+
+    private void applyPricing(OrderEntity order, BigDecimal subtotal, CreateOrderRequest request) {
+        if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+            PromotionEntity promotion = promotionService.redeem(request.getPromotionCode().trim(), order.getBranchId(), subtotal);
+            order.setPromotionId(promotion.getId());
+        }
+        int points = request.getPointsToUse() != null ? request.getPointsToUse() : 0;
+        if (points > 0) {
+            if (order.getCustomerId() == null) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "Spending points needs a customer");
+            }
+            BigDecimal discount = order.getPromotionId() != null
+                ? promotionService.discountFor(promotionService.get(order.getPromotionId()), subtotal)
+                : BigDecimal.ZERO;
+            int maxPoints = maxPoints(subtotal.subtract(discount));
+            if (points > maxPoints) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "At most " + maxPoints + " points can be spent on this order");
+            }
+        }
+        order.setPointsUsed(points);
+        price(order, subtotal);
+    }
+
+    // subtotal - promotion - points = net, + VAT on the net = what the customer pays
+    private void price(OrderEntity order, BigDecimal subtotal) {
+        BigDecimal discount = order.getPromotionId() != null
+            ? promotionService.discountFor(promotionService.get(order.getPromotionId()), subtotal)
+            : BigDecimal.ZERO;
+        BigDecimal pointsDiscount = loyaltyService.pointValue().multiply(BigDecimal.valueOf(order.getPointsUsed()));
+        BigDecimal net = subtotal.subtract(discount).subtract(pointsDiscount);
+        BigDecimal vat = net.multiply(settingService.getVatPercent()).divide(HUNDRED, 0, RoundingMode.HALF_UP);
+        order.setSubtotal(subtotal);
+        order.setDiscountAmount(discount);
+        order.setVatAmount(vat);
+        order.setTotalAmount(net.add(vat));
+    }
+
+    private int maxPoints(BigDecimal payable) {
+        return payable.max(BigDecimal.ZERO).divide(loyaltyService.pointValue(), 0, RoundingMode.FLOOR).intValue();
+    }
+
+    // After dishes were added or removed: the promotion and the points must still fit the new bill
+    private void recalculate(OrderEntity order) {
+        BigDecimal subtotal = orderItemRepository.findByOrderId(order.getId()).stream()
+            .filter(i -> i.getStatus() != OrderItemStatus.CANCELLED)
+            .map(OrderItemEntity::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (order.getPromotionId() != null
+            && subtotal.compareTo(promotionService.get(order.getPromotionId()).getMinOrderAmount()) < 0) {
+            promotionService.release(order.getPromotionId());
+            order.setPromotionId(null);
+        }
+        BigDecimal discount = order.getPromotionId() != null
+            ? promotionService.discountFor(promotionService.get(order.getPromotionId()), subtotal)
+            : BigDecimal.ZERO;
+        int fits = maxPoints(subtotal.subtract(discount));
+        if (order.getPointsUsed() > fits) {
+            loyaltyService.giveBack(order, order.getPointsUsed() - fits);
+            order.setPointsUsed(fits);
+        }
+        price(order, subtotal);
+        orderRepository.save(order);
+    }
+
+    private void checkKitchenAcceptsTakeaway(BranchEntity branch) {
+        BranchLoadResponse load = kitchenService.computeLoad(branch);
+        if (!load.isAcceptingTakeaway()) {
+            String wait = load.getEstimatedWaitMinutes() != null
+                ? " Estimated wait: " + load.getEstimatedWaitMinutes() + " minutes."
+                : "";
+            throw new AppException(ErrorCode.BRANCH_BUSY, ErrorCode.BRANCH_BUSY.getMessage() + "." + wait);
+        }
+    }
+
+    // Guests order another round on the same bill
+    @Override
+    @Transactional
+    public OrderResponse addItems(Integer staffId, Integer orderId, AddOrderItemsRequest request) {
+        OrderEntity order = findOpenOrder(staffId, orderId);
+        if (paymentRepository.existsByOrderIdAndStatus(orderId, PaymentStatus.PAID)) {
+            throw new AppException(ErrorCode.ALREADY_PAID, "Order " + order.getCode() + " is already paid: open a new order for more dishes");
+        }
+        if (order.getType() != OrderType.DINE_IN) {
+            checkKitchenAcceptsTakeaway(branchRepository.findByIdForUpdate(order.getBranchId())
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND)));
+        }
+        List<OrderItemEntity> items = buildItems(order.getBranchId(), request.getItems());
+        items.forEach(item -> item.setOrderId(orderId));
+        orderItemRepository.saveAll(items);
+        recalculate(order);
+
+        log.info("Added {} dishes to order {}", items.size(), order.getCode());
+        return toResponse(order, orderItemRepository.findByOrderId(orderId));
+    }
+
+    // A dish not started yet can be dropped by the floor staff; once the kitchen is on it only a manager may,
+    // and a served dish cannot be taken off the bill
+    @Override
+    @Transactional
+    public OrderResponse cancelItem(Integer staffId, Integer orderId, Integer itemId, String reason) {
+        OrderEntity order = findOpenOrder(staffId, orderId);
+        if (paymentRepository.existsByOrderIdAndStatus(orderId, PaymentStatus.PAID)) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " has been paid: refund it before changing it");
+        }
+        OrderItemEntity item = orderItemRepository.findById(itemId)
+            .filter(i -> i.getOrderId().equals(orderId))
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Dish " + itemId + " is not on order " + order.getCode()));
+
+        OrderItemStatus from = item.getStatus();
+        if (from == OrderItemStatus.SERVED || from == OrderItemStatus.CANCELLED) {
+            throw new AppException(ErrorCode.INVALID_STATE, item.getItemName() + " is already " + from);
+        }
+        if (from != OrderItemStatus.PENDING) {
+            StaffRole role = staffRepository.findById(staffId).orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED)).getRole();
+            if (role != StaffRole.ADMIN && role != StaffRole.BRANCH_MANAGER) {
+                throw new AppException(ErrorCode.FORBIDDEN, item.getItemName() + " is already being cooked: ask a manager");
+            }
+        }
+        // Compare-and-set: if the cook grabs the dish at this very moment, one of the two loses cleanly
+        if (orderItemRepository.transition(itemId, from, OrderItemStatus.CANCELLED, LocalDateTime.now()) == 0) {
+            throw new AppException(ErrorCode.INVALID_STATE, item.getItemName() + " changed in the meantime, try again");
+        }
+        OrderItemEntity cancelled = orderItemRepository.findById(itemId).orElseThrow();
+        cancelled.setCancelReason(reason);
+        orderItemRepository.save(cancelled);
+        recalculate(order);
+
+        log.info("Cancelled {} on order {} ({})", item.getItemName(), order.getCode(), reason);
+        return toResponse(order, orderItemRepository.findByOrderId(orderId));
+    }
+
+    // Name and price always come from the menu, never from the client
+    private List<OrderItemEntity> buildItems(Integer branchId, List<CreateOrderRequest.OrderItemRequest> requests) {
+        List<Integer> menuItemIds = requests.stream().map(CreateOrderRequest.OrderItemRequest::getMenuItemId).distinct().toList();
+        Map<Integer, MenuItemEntity> menuItems = menuItemRepository.findAllById(menuItemIds).stream()
+            .collect(Collectors.toMap(MenuItemEntity::getId, Function.identity()));
+        Map<Integer, BranchMenuItemEntity> branchOverrides = branchMenuItemRepository
+            .findByBranchIdAndMenuItemIdIn(branchId, menuItemIds).stream()
+            .collect(Collectors.toMap(BranchMenuItemEntity::getMenuItemId, Function.identity()));
+
+        List<OrderItemEntity> items = new ArrayList<>();
+        for (CreateOrderRequest.OrderItemRequest itemReq : requests) {
+            MenuItemEntity menuItem = menuItems.get(itemReq.getMenuItemId());
+            if (menuItem == null || !Boolean.TRUE.equals(menuItem.getIsActive()) || menuItem.getDeletedAt() != null) {
+                throw new AppException(ErrorCode.MENU_ITEM_UNAVAILABLE, "Menu item not available: " + itemReq.getMenuItemId());
+            }
+            // A dish from the chain menu is sold at every branch unless the branch turned it off
+            BranchMenuItemEntity override = branchOverrides.get(menuItem.getId());
+            if (override != null && !Boolean.TRUE.equals(override.getIsAvailable())) {
+                throw new AppException(ErrorCode.MENU_ITEM_UNAVAILABLE, menuItem.getName() + " is sold out at this branch");
+            }
+            BigDecimal unitPrice = override != null && override.getPrice() != null ? override.getPrice() : menuItem.getBasePrice();
+
+            OrderItemEntity item = new OrderItemEntity();
+            item.setMenuItemId(menuItem.getId());
+            item.setItemName(menuItem.getName());
+            item.setUnitPrice(unitPrice);
+            item.setQuantity(itemReq.getQuantity());
+            item.setAmount(unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+            item.setStatus(OrderItemStatus.PENDING);
+            item.setNote(itemReq.getNotes());
+            items.add(item);
+        }
+        return items;
     }
 
     @Override
-    public OrderResponse getOrder(Integer orderId) {
-        OrderEntity order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
-
-        List<OrderItemResponse> items = orderItemRepository.findByOrderId(orderId)
-            .stream()
-            .map(OrderItemResponse::from)
-            .collect(Collectors.toList());
-
-        return OrderResponse.from(order, items);
+    @Transactional(readOnly = true)
+    public OrderResponse getOrder(Integer staffId, Integer orderId) {
+        OrderEntity order = findOrder(orderId);
+        branchAccessGuard.check(staffId, order.getBranchId());
+        return toResponse(order, orderItemRepository.findByOrderId(orderId));
     }
 
     @Override
     @Transactional
-    public OrderResponse completeOrder(Integer orderId) {
-        OrderEntity order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+    public OrderResponse completeOrder(Integer staffId, Integer orderId) {
+        OrderEntity order = findOpenOrder(staffId, orderId);
+        if (orderItemRepository.countByOrderIdAndStatusIn(orderId, UNFINISHED_ITEM_STATUSES) > 0) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " still has dishes in the kitchen");
+        }
+        if (!paymentRepository.existsByOrderIdAndStatus(orderId, PaymentStatus.PAID)) {
+            throw new AppException(ErrorCode.ORDER_NOT_PAID, "Order " + order.getCode() + " has not been paid yet");
+        }
 
         order.setStatus(OrderStatus.COMPLETED);
-        order.setUpdatedAt(LocalDateTime.now());
+        order.setClosedBy(staffId);
+        order.setClosedAt(LocalDateTime.now());
         orderRepository.save(order);
+        releaseTable(order);
+        loyaltyService.earn(order);
 
-        log.info("Completed order: {}", orderId);
-        return getOrder(orderId);
+        log.info("Completed order {}", order.getCode());
+        return toResponse(order, orderItemRepository.findByOrderId(orderId));
     }
 
     @Override
     @Transactional
-    public OrderResponse cancelOrder(Integer orderId) {
-        OrderEntity order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+    public OrderResponse cancelOrder(Integer staffId, Integer orderId) {
+        OrderEntity order = findOpenOrder(staffId, orderId);
+        if (paymentRepository.existsByOrderIdAndStatus(orderId, PaymentStatus.PAID)) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " has been paid: refund it before cancelling");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        // Take the dishes off the kitchen queue too
+        orderItemRepository.cancelByOrderId(orderId, UNFINISHED_ITEM_STATUSES, now);
 
         order.setStatus(OrderStatus.CANCELLED);
-        order.setUpdatedAt(LocalDateTime.now());
+        order.setClosedBy(staffId);
+        order.setClosedAt(now);
         orderRepository.save(order);
+        releaseTable(order);
+        loyaltyService.giveBackSpent(order);
+        if (order.getPromotionId() != null) {
+            promotionService.release(order.getPromotionId());
+        }
 
-        log.info("Cancelled order: {}", orderId);
-        return getOrder(orderId);
+        log.info("Cancelled order {}", order.getCode());
+        return toResponse(order, orderItemRepository.findByOrderId(orderId));
     }
 
     @Override
-    public List<OrderResponse> getOrdersByBranch(Integer branchId) {
-        return orderRepository.findByBranchIdAndStatus(branchId, OrderStatus.OPEN)
-            .stream()
-            .map(order -> getOrder(order.getId()))
-            .collect(Collectors.toList());
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getOrdersByBranch(Integer staffId, Integer branchId) {
+        branchAccessGuard.check(staffId, branchId);
+        return toResponses(orderRepository.findByBranchIdAndStatus(branchId, OrderStatus.OPEN));
     }
 
     @Override
-    public List<OrderResponse> getOrdersByCustomer(Integer customerId) {
-        return orderRepository.findByCustomerId(customerId)
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getOrdersByCustomer(Integer staffId, Integer customerId) {
+        // Customers are shared across the chain, but staff only see the orders placed at their own branch
+        StaffEntity staff = staffRepository.findById(staffId).orElseThrow(() -> new AppException(ErrorCode.UNAUTHORIZED));
+        List<OrderEntity> orders = staff.getRole() == StaffRole.ADMIN
+            ? orderRepository.findByCustomerId(customerId)
+            : orderRepository.findByCustomerIdAndBranchId(customerId, staff.getBranchId());
+        return toResponses(orders);
+    }
+
+    private OrderEntity findOrder(Integer orderId) {
+        return orderRepository.findById(orderId)
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Order not found: " + orderId));
+    }
+
+    // Row lock: complete, cancel and payment of the same order cannot interleave
+    private OrderEntity findOpenOrder(Integer staffId, Integer orderId) {
+        OrderEntity order = orderRepository.findByIdForUpdate(orderId)
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Order not found: " + orderId));
+        branchAccessGuard.check(staffId, order.getBranchId());
+        if (order.getStatus() != OrderStatus.OPEN) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " is already " + order.getStatus());
+        }
+        return order;
+    }
+
+    // The table is free again once its last open order is closed
+    private void releaseTable(OrderEntity order) {
+        if (order.getTableId() != null && !orderRepository.existsByTableIdAndStatus(order.getTableId(), OrderStatus.OPEN)) {
+            diningTableRepository.updateStatus(order.getTableId(), TableStatus.AVAILABLE);
+        }
+    }
+
+    // Loads items of all orders in one query instead of one query per order
+    private List<OrderResponse> toResponses(List<OrderEntity> orders) {
+        Map<Integer, List<OrderItemEntity>> itemsByOrder = orderItemRepository
+            .findByOrderIdIn(orders.stream().map(OrderEntity::getId).toList())
             .stream()
-            .map(order -> getOrder(order.getId()))
-            .collect(Collectors.toList());
+            .collect(Collectors.groupingBy(OrderItemEntity::getOrderId));
+        return orders.stream()
+            .map(order -> toResponse(order, itemsByOrder.getOrDefault(order.getId(), List.of())))
+            .toList();
+    }
+
+    private OrderResponse toResponse(OrderEntity order, List<OrderItemEntity> items) {
+        return OrderResponse.from(order, items.stream().map(OrderItemResponse::from).toList(), loyaltyService.pointValue());
     }
 }

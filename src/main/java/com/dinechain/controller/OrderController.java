@@ -1,12 +1,17 @@
 package com.dinechain.controller;
 
+import com.dinechain.dto.request.AddOrderItemsRequest;
+import com.dinechain.dto.request.CancelOrderItemRequest;
 import com.dinechain.dto.request.CreateOrderRequest;
 import com.dinechain.dto.response.OrderResponse;
+import com.dinechain.security.CurrentUser;
 import com.dinechain.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.dinechain.security.Roles;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,44 +28,69 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    @Operation(summary = "Tạo đơn hàng")
+    @Operation(summary = "Tạo đơn hàng", description = "Khi bếp quá tải, đơn mang đi/giao hàng bị từ chối với mã 503 BRANCH_BUSY; đơn tại bàn luôn được nhận")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody CreateOrderRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createOrder(request));
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
+    public ResponseEntity<OrderResponse> createOrder(@CurrentUser Integer staffId,
+                                                     @Valid @RequestBody CreateOrderRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createOrder(staffId, request));
     }
 
     @GetMapping("/{orderId}")
     @Operation(summary = "Lấy đơn hàng")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<OrderResponse> getOrder(@PathVariable Integer orderId) {
-        return ResponseEntity.ok(orderService.getOrder(orderId));
+    public ResponseEntity<OrderResponse> getOrder(@CurrentUser Integer staffId, @PathVariable Integer orderId) {
+        return ResponseEntity.ok(orderService.getOrder(staffId, orderId));
     }
 
     @PutMapping("/{orderId}/complete")
-    @Operation(summary = "Hoàn thành đơn hàng")
+    @Operation(summary = "Hoàn thành đơn hàng", description = "Chỉ hoàn thành được khi mọi món đã phục vụ hoặc đã huỷ")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<OrderResponse> completeOrder(@PathVariable Integer orderId) {
-        return ResponseEntity.ok(orderService.completeOrder(orderId));
+    @PreAuthorize(Roles.CASHIER)
+    public ResponseEntity<OrderResponse> completeOrder(@CurrentUser Integer staffId, @PathVariable Integer orderId) {
+        return ResponseEntity.ok(orderService.completeOrder(staffId, orderId));
     }
 
     @PutMapping("/{orderId}/cancel")
-    @Operation(summary = "Hủy đơn hàng")
+    @Operation(summary = "Hủy đơn hàng", description = "Các món chưa phục vụ cũng bị gỡ khỏi hàng đợi bếp")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<OrderResponse> cancelOrder(@PathVariable Integer orderId) {
-        return ResponseEntity.ok(orderService.cancelOrder(orderId));
+    @PreAuthorize(Roles.CASHIER)
+    public ResponseEntity<OrderResponse> cancelOrder(@CurrentUser Integer staffId, @PathVariable Integer orderId) {
+        return ResponseEntity.ok(orderService.cancelOrder(staffId, orderId));
     }
 
     @GetMapping("/branch/{branchId}")
-    @Operation(summary = "Danh sách đơn hàng theo chi nhánh")
+    @Operation(summary = "Danh sách đơn hàng đang mở theo chi nhánh")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<List<OrderResponse>> getOrdersByBranch(@PathVariable Integer branchId) {
-        return ResponseEntity.ok(orderService.getOrdersByBranch(branchId));
+    public ResponseEntity<List<OrderResponse>> getOrdersByBranch(@CurrentUser Integer staffId, @PathVariable Integer branchId) {
+        return ResponseEntity.ok(orderService.getOrdersByBranch(staffId, branchId));
     }
 
     @GetMapping("/customer/{customerId}")
     @Operation(summary = "Danh sách đơn hàng theo khách hàng")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<List<OrderResponse>> getOrdersByCustomer(@PathVariable Integer customerId) {
-        return ResponseEntity.ok(orderService.getOrdersByCustomer(customerId));
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
+    public ResponseEntity<List<OrderResponse>> getOrdersByCustomer(@CurrentUser Integer staffId, @PathVariable Integer customerId) {
+        return ResponseEntity.ok(orderService.getOrdersByCustomer(staffId, customerId));
+    }
+
+    @PostMapping("/{orderId}/items")
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
+    @Operation(summary = "Gọi thêm món", description = "Thêm món vào đơn đang mở (chưa thanh toán); tổng tiền, khuyến mãi, VAT được tính lại")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<OrderResponse> addItems(@CurrentUser Integer staffId, @PathVariable Integer orderId,
+                                                  @Valid @RequestBody AddOrderItemsRequest request) {
+        return ResponseEntity.ok(orderService.addItems(staffId, orderId, request));
+    }
+
+    @PutMapping("/{orderId}/items/{itemId}/cancel")
+    @PreAuthorize(Roles.FRONT_OF_HOUSE)
+    @Operation(summary = "Huỷ một món",
+        description = "Món chưa nấu: nhân viên huỷ được. Món đang nấu / đã xong: chỉ quản lý. Món đã bưng ra: không huỷ được")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<OrderResponse> cancelItem(@CurrentUser Integer staffId, @PathVariable Integer orderId,
+                                                    @PathVariable Integer itemId,
+                                                    @Valid @RequestBody(required = false) CancelOrderItemRequest request) {
+        return ResponseEntity.ok(orderService.cancelItem(staffId, orderId, itemId, request != null ? request.getReason() : null));
     }
 }

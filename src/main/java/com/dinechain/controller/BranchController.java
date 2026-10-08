@@ -13,6 +13,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.dinechain.security.CurrentUser;
+import com.dinechain.security.Roles;
+import org.springframework.security.access.prepost.PreAuthorize;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +44,7 @@ public class BranchController {
         @ApiResponse(responseCode = "401", description = "Chưa xác thực",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
+    @PreAuthorize(Roles.ADMIN)
     public ResponseEntity<BranchResponse> createBranch(@Valid @RequestBody CreateBranchRequest request) {
         BranchResponse response = branchService.createBranch(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -79,11 +83,13 @@ public class BranchController {
         @ApiResponse(responseCode = "401", description = "Chưa xác thực",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
+    @PreAuthorize(Roles.MANAGEMENT)
     public ResponseEntity<BranchResponse> updateBranch(
+        @CurrentUser Integer staffId,
         @PathVariable Integer branchId,
         @Valid @RequestBody UpdateBranchRequest request
     ) {
-        BranchResponse response = branchService.updateBranch(branchId, request);
+        BranchResponse response = branchService.updateBranch(staffId, branchId, request);
         return ResponseEntity.ok(response);
     }
 
@@ -100,6 +106,7 @@ public class BranchController {
         @ApiResponse(responseCode = "401", description = "Chưa xác thực",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
+    @PreAuthorize(Roles.ADMIN)
     public ResponseEntity<Void> deleteBranch(@PathVariable Integer branchId) {
         branchService.deleteBranch(branchId);
         return ResponseEntity.noContent().build();

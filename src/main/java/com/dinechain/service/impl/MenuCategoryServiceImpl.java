@@ -6,6 +6,8 @@ import com.dinechain.dto.response.MenuCategoryResponse;
 import com.dinechain.entity.MenuCategoryEntity;
 import com.dinechain.repository.MenuCategoryRepository;
 import com.dinechain.service.MenuCategoryService;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
     @Override
     public MenuCategoryResponse getCategory(Integer categoryId) {
         MenuCategoryEntity category = categoryRepository.findById(categoryId)
-            .orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found: " + categoryId));
         return MenuCategoryResponse.from(category);
     }
 
@@ -46,7 +48,7 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
     @Transactional
     public MenuCategoryResponse updateCategory(Integer categoryId, UpdateMenuCategoryRequest request) {
         MenuCategoryEntity category = categoryRepository.findById(categoryId)
-            .orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found: " + categoryId));
 
         category.setName(request.getName());
         if (request.getSortOrder() != null) {
@@ -65,7 +67,7 @@ public class MenuCategoryServiceImpl implements MenuCategoryService {
     @Transactional
     public void deleteCategory(Integer categoryId) {
         MenuCategoryEntity category = categoryRepository.findById(categoryId)
-            .orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found: " + categoryId));
 
         categoryRepository.delete(category);
         log.info("Deleted menu category: {}", category.getName());

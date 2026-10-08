@@ -11,10 +11,12 @@ public enum ErrorCode {
     ACCOUNT_RESIGNED("ACCOUNT_RESIGNED", "Staff has resigned", 403),
     INVALID_TOKEN("INVALID_TOKEN", "Invalid or expired token", 401),
     REFRESH_TOKEN_REVOKED("REFRESH_TOKEN_REVOKED", "Refresh token has been revoked", 401),
+    TOO_MANY_LOGIN_ATTEMPTS("TOO_MANY_LOGIN_ATTEMPTS", "Too many failed logins, try again later", 429),
 
     // Validation errors
     VALIDATION_ERROR("VALIDATION_ERROR", "Validation failed", 400),
     INVALID_REQUEST("INVALID_REQUEST", "Invalid request", 400),
+    METHOD_NOT_ALLOWED("METHOD_NOT_ALLOWED", "HTTP method not allowed", 405),
 
     // Resource not found
     NOT_FOUND("NOT_FOUND", "Resource not found", 404),
@@ -30,6 +32,16 @@ public enum ErrorCode {
     // Invalid state
     INVALID_STATE("INVALID_STATE", "Operation not allowed in current state", 409),
     TABLE_OCCUPIED("TABLE_OCCUPIED", "Table is occupied", 409),
+    ORDER_NOT_PAID("ORDER_NOT_PAID", "Order has not been paid yet", 409),
+    ALREADY_PAID("ALREADY_PAID", "Order has already been paid", 409),
+    INSUFFICIENT_CASH("INSUFFICIENT_CASH", "Cash received is less than the order total", 400),
+    PAYMENT_METHOD_NOT_SUPPORTED("PAYMENT_METHOD_NOT_SUPPORTED", "Only cash payments are accepted", 400),
+    MENU_ITEM_UNAVAILABLE("MENU_ITEM_UNAVAILABLE", "Menu item is not available at this branch", 409),
+    PROMOTION_NOT_APPLICABLE("PROMOTION_NOT_APPLICABLE", "Promotion code cannot be used for this order", 409),
+    NOT_ENOUGH_POINTS("NOT_ENOUGH_POINTS", "Customer does not have enough points", 409),
+
+    // Peak hours
+    BRANCH_BUSY("BRANCH_BUSY", "Kitchen is at full capacity, takeaway and delivery orders are paused", 503),
 
     // Server errors
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "Internal server error", 500);

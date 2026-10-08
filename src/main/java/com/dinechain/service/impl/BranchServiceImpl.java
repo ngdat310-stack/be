@@ -6,7 +6,10 @@ import com.dinechain.dto.request.UpdateBranchRequest;
 import com.dinechain.dto.response.BranchResponse;
 import com.dinechain.entity.BranchEntity;
 import com.dinechain.repository.BranchRepository;
+import com.dinechain.security.BranchAccessGuard;
 import com.dinechain.service.BranchService;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,13 +24,14 @@ import java.util.List;
 public class BranchServiceImpl implements BranchService {
 
     private final BranchRepository branchRepository;
+    private final BranchAccessGuard branchAccessGuard;
 
     @Override
     @Transactional
     public BranchResponse createBranch(CreateBranchRequest request) {
         // Check if code already exists
         if (branchRepository.findByCode(request.getCode()).isPresent()) {
-            throw new RuntimeException("Branch code already exists: " + request.getCode());
+            throw new AppException(ErrorCode.DUPLICATE_CODE, "Branch code already exists: " + request.getCode());
         }
 
         BranchEntity branch = BranchEntity.builder()
@@ -51,15 +55,16 @@ public class BranchServiceImpl implements BranchService {
     @Override
     public BranchResponse getBranch(Integer branchId) {
         BranchEntity branch = branchRepository.findById(branchId)
-            .orElseThrow(() -> new RuntimeException("Branch not found: " + branchId));
+            .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND, "Branch not found: " + branchId));
         return BranchResponse.from(branch);
     }
 
     @Override
     @Transactional
-    public BranchResponse updateBranch(Integer branchId, UpdateBranchRequest request) {
+    public BranchResponse updateBranch(Integer staffId, Integer branchId, UpdateBranchRequest request) {
+        branchAccessGuard.check(staffId, branchId);
         BranchEntity branch = branchRepository.findById(branchId)
-            .orElseThrow(() -> new RuntimeException("Branch not found: " + branchId));
+            .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND, "Branch not found: " + branchId));
 
         branch.setName(request.getName());
         branch.setAddress(request.getAddress());
@@ -68,6 +73,7 @@ public class BranchServiceImpl implements BranchService {
         branch.setOpenTime(request.getOpenTime());
         branch.setCloseTime(request.getCloseTime());
         branch.setManagerId(request.getManagerId());
+        branch.setKitchenCapacity(request.getKitchenCapacity());
         branch.setUpdatedAt(LocalDateTime.now());
 
         BranchEntity updated = branchRepository.save(branch);
@@ -80,7 +86,7 @@ public class BranchServiceImpl implements BranchService {
     @Transactional
     public void deleteBranch(Integer branchId) {
         BranchEntity branch = branchRepository.findById(branchId)
-            .orElseThrow(() -> new RuntimeException("Branch not found: " + branchId));
+            .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND, "Branch not found: " + branchId));
 
         branch.setStatus(BranchStatus.INACTIVE);
         branch.setUpdatedAt(LocalDateTime.now());

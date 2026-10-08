@@ -1,5 +1,6 @@
 package com.dinechain.configuration;
 
+import com.dinechain.constant.StaffStatus;
 import com.dinechain.repository.StaffRepository;
 import com.dinechain.security.JwtService;
 import jakarta.servlet.FilterChain;
@@ -44,7 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         // Load staff from database
                         var staff = staffRepository.findById(staffId).orElse(null);
 
-                        if (staff != null) {
+                        // Resigned staff lose access at once, even with a token that has not expired yet
+                        if (staff != null && staff.getStatus() != StaffStatus.RESIGNED) {
                             // Create authentication token
                             var authority = new SimpleGrantedAuthority("ROLE_" + staff.getRole().name());
                             UsernamePasswordAuthenticationToken authentication =

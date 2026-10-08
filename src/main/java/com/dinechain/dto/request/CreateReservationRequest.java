@@ -1,6 +1,8 @@
 package com.dinechain.dto.request;
 
+import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,9 +22,11 @@ public class CreateReservationRequest {
     private Integer customerId;
 
     @NotNull(message = "Reservation date is required")
+    @Future(message = "Reservation date must be in the future")
     private LocalDateTime reservationDate;
 
     @NotNull(message = "Number of guests is required")
+    @Positive(message = "Number of guests must be positive")
     private Integer numberOfGuests;
 
     private String notes;

@@ -97,7 +97,8 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.1.0</version>
+			<!-- 3.x is the line built for Spring Boot 4 / Spring Framework 7 (2.x crashes on /v3/api-docs) -->
+			<version>3.1.1</version>
 		</dependency>
 
 		<dependency>

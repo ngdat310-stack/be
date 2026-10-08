@@ -10,7 +10,7 @@ public interface AuthService {
     /**
      * Staff login with username and password
      */
-    AuthResponse login(LoginRequest request);
+    AuthResponse login(LoginRequest request, String clientAddress);
 
     /**
      * Refresh access token using refresh token

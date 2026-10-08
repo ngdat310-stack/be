@@ -4,8 +4,8 @@ import com.dinechain.dto.request.CreatePaymentRequest;
 import com.dinechain.dto.response.PaymentResponse;
 
 public interface PaymentService {
-    PaymentResponse processPayment(CreatePaymentRequest request);
-    PaymentResponse getPayment(Integer paymentId);
-    PaymentResponse getPaymentByOrder(Integer orderId);
-    void refundPayment(Integer paymentId);
+    PaymentResponse processPayment(Integer staffId, CreatePaymentRequest request);
+    PaymentResponse getPayment(Integer staffId, Integer paymentId);
+    PaymentResponse getPaymentByOrder(Integer staffId, Integer orderId);
+    PaymentResponse refundPayment(Integer staffId, Integer paymentId);
 }

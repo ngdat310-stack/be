@@ -30,6 +30,11 @@ public class CreateStaffRequest {
     @Pattern(regexp = "^[0-9\\-+\\s()]+$")
     private String phone;
 
+    // Initial password, handed to the employee who should change it via PUT /auth/me/password
+    @NotBlank(message = "Password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters")
+    private String password;
+
     @NotNull(message = "Role is required")
     private StaffRole role;
 

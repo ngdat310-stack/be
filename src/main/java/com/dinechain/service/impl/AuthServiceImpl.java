@@ -8,16 +8,23 @@ import com.dinechain.dto.response.AuthResponse;
 import com.dinechain.dto.response.StaffResponse;
 import com.dinechain.entity.RefreshTokenEntity;
 import com.dinechain.entity.StaffEntity;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
 import com.dinechain.repository.RefreshTokenRepository;
 import com.dinechain.repository.StaffRepository;
 import com.dinechain.security.JwtService;
+import com.dinechain.security.LoginAttemptGuard;
 import com.dinechain.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.Optional;
 
 @Slf4j
@@ -28,24 +35,32 @@ public class AuthServiceImpl implements AuthService {
     private final StaffRepository staffRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
+    private final LoginAttemptGuard loginAttemptGuard;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
-    public AuthResponse login(LoginRequest request) {
-        // 1. Find staff by username
-        StaffEntity staff = staffRepository.findByUsername(request.getUsername())
-            .orElseThrow(() -> new RuntimeException("Invalid username or password"));
+    public AuthResponse login(LoginRequest request, String clientAddress) {
+        loginAttemptGuard.checkAllowed(request.getUsername(), clientAddress);
+
+        // 1. Find staff by username (an unknown username counts as a failed attempt too)
+        StaffEntity staff = staffRepository.findByUsername(request.getUsername()).orElse(null);
+        if (staff == null) {
+            loginAttemptGuard.recordFailure(request.getUsername(), clientAddress);
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
+        }
 
         // 2. Check if staff is resigned
         if (staff.getStatus() == StaffStatus.RESIGNED) {
-            throw new RuntimeException("Staff has resigned");
+            throw new AppException(ErrorCode.ACCOUNT_RESIGNED);
         }
 
         // 3. Verify password
         if (!passwordEncoder.matches(request.getPassword(), staff.getPasswordHash())) {
-            throw new RuntimeException("Invalid username or password");
+            loginAttemptGuard.recordFailure(request.getUsername(), clientAddress);
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
+        loginAttemptGuard.recordSuccess(request.getUsername(), clientAddress);
 
         // 4. Generate tokens
         String accessToken = jwtService.generateAccessToken(staff);
@@ -77,18 +92,21 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refresh(RefreshTokenRequest request) {
         // 1. Validate refresh token
         Integer staffId = jwtService.validateRefreshToken(request.getRefreshToken());
+        if (staffId == null) {
+            throw new AppException(ErrorCode.INVALID_TOKEN);
+        }
 
         // 2. Check if token is revoked in database
         RefreshTokenEntity token = refreshTokenRepository
             .findByTokenHashAndRevokedAtIsNull(hashToken(request.getRefreshToken()))
-            .orElseThrow(() -> new RuntimeException("Invalid or revoked refresh token"));
+            .orElseThrow(() -> new AppException(ErrorCode.REFRESH_TOKEN_REVOKED));
 
         // 3. Get staff
         StaffEntity staff = staffRepository.findById(staffId)
-            .orElseThrow(() -> new RuntimeException("Staff not found"));
+            .orElseThrow(() -> new AppException(ErrorCode.STAFF_NOT_FOUND));
 
         if (staff.getStatus() == StaffStatus.RESIGNED) {
-            throw new RuntimeException("Staff has resigned");
+            throw new AppException(ErrorCode.ACCOUNT_RESIGNED);
         }
 
         // 4. Generate new tokens
@@ -134,7 +152,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public StaffResponse getCurrentStaff(Integer staffId) {
         StaffEntity staff = staffRepository.findById(staffId)
-            .orElseThrow(() -> new RuntimeException("Staff not found"));
+            .orElseThrow(() -> new AppException(ErrorCode.STAFF_NOT_FOUND));
         return StaffResponse.from(staff);
     }
 
@@ -142,11 +160,11 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void changePassword(Integer staffId, ChangePasswordRequest request) {
         StaffEntity staff = staffRepository.findById(staffId)
-            .orElseThrow(() -> new RuntimeException("Staff not found"));
+            .orElseThrow(() -> new AppException(ErrorCode.STAFF_NOT_FOUND));
 
         // Verify current password
         if (!passwordEncoder.matches(request.getCurrentPassword(), staff.getPasswordHash())) {
-            throw new RuntimeException("Current password is incorrect");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Current password is incorrect");
         }
 
         // Update password
@@ -157,8 +175,13 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.revokeAllTokensByStaffId(staffId, LocalDateTime.now());
     }
 
+    // Store only a SHA-256 hash: a leaked table cannot be replayed, and it fits the column (RS256 tokens are > 255 chars)
     private String hashToken(String token) {
-        // TODO: Implement token hashing (SHA-256 or similar)
-        return token; // Temporary: use token as-is
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 }

@@ -6,6 +6,11 @@ import com.dinechain.dto.response.ReservationResponse;
 import com.dinechain.entity.ReservationEntity;
 import com.dinechain.repository.ReservationRepository;
 import com.dinechain.service.ReservationService;
+import com.dinechain.exception.AppException;
+import com.dinechain.exception.ErrorCode;
+import com.dinechain.entity.CustomerEntity;
+import com.dinechain.repository.CustomerRepository;
+import com.dinechain.security.BranchAccessGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,15 +25,27 @@ import java.util.List;
 public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
+    private final CustomerRepository customerRepository;
+    private final BranchAccessGuard branchAccessGuard;
 
     @Override
     @Transactional
-    public ReservationResponse createReservation(CreateReservationRequest request) {
-        ReservationEntity reservation = ReservationEntity.builder()
-            .branchId(request.getBranchId())
-            .customerId(request.getCustomerId())
-            .status(ReservationStatus.PENDING)
-            .build();
+    public ReservationResponse createReservation(Integer staffId, CreateReservationRequest request) {
+        branchAccessGuard.check(staffId, request.getBranchId());
+        CustomerEntity customer = customerRepository.findById(request.getCustomerId())
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Customer not found: " + request.getCustomerId()));
+
+        ReservationEntity reservation = new ReservationEntity();
+        reservation.setBranchId(request.getBranchId());
+        reservation.setCustomerId(customer.getId());
+        // Walk-in customers may be registered with a phone number only
+        reservation.setCustomerName(customer.getFullName() != null ? customer.getFullName() : customer.getPhone());
+        reservation.setCustomerPhone(customer.getPhone());
+        reservation.setGuestCount(request.getNumberOfGuests());
+        reservation.setReservedAt(request.getReservationDate());
+        reservation.setNote(request.getNotes());
+        reservation.setStatus(ReservationStatus.PENDING);
+        reservation.setCreatedBy(staffId);
 
         ReservationEntity saved = reservationRepository.save(reservation);
         log.info("Created reservation: {} for date: {}", saved.getId(), request.getReservationDate());
@@ -36,46 +53,54 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public ReservationResponse getReservation(Integer reservationId) {
-        ReservationEntity reservation = reservationRepository.findById(reservationId)
-            .orElseThrow(() -> new RuntimeException("Reservation not found"));
-        return ReservationResponse.from(reservation);
+    @Transactional(readOnly = true)
+    public ReservationResponse getReservation(Integer staffId, Integer reservationId) {
+        return ReservationResponse.from(findAccessible(staffId, reservationId));
     }
 
     @Override
     @Transactional
-    public ReservationResponse confirmReservation(Integer reservationId) {
-        ReservationEntity reservation = reservationRepository.findById(reservationId)
-            .orElseThrow(() -> new RuntimeException("Reservation not found"));
-
+    public ReservationResponse confirmReservation(Integer staffId, Integer reservationId) {
+        ReservationEntity reservation = findAccessible(staffId, reservationId);
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Reservation is already " + reservation.getStatus());
+        }
         reservation.setStatus(ReservationStatus.CONFIRMED);
         reservation.setUpdatedAt(LocalDateTime.now());
         reservationRepository.save(reservation);
-
         log.info("Confirmed reservation: {}", reservationId);
         return ReservationResponse.from(reservation);
     }
 
     @Override
     @Transactional
-    public ReservationResponse cancelReservation(Integer reservationId) {
-        ReservationEntity reservation = reservationRepository.findById(reservationId)
-            .orElseThrow(() -> new RuntimeException("Reservation not found"));
-
+    public ReservationResponse cancelReservation(Integer staffId, Integer reservationId) {
+        ReservationEntity reservation = findAccessible(staffId, reservationId);
+        if (reservation.getStatus() != ReservationStatus.PENDING && reservation.getStatus() != ReservationStatus.CONFIRMED) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Reservation is already " + reservation.getStatus());
+        }
         reservation.setStatus(ReservationStatus.CANCELLED);
         reservation.setUpdatedAt(LocalDateTime.now());
         reservationRepository.save(reservation);
-
         log.info("Cancelled reservation: {}", reservationId);
         return ReservationResponse.from(reservation);
     }
 
     @Override
-    public List<ReservationResponse> getReservationsByBranch(Integer branchId) {
+    @Transactional(readOnly = true)
+    public List<ReservationResponse> getReservationsByBranch(Integer staffId, Integer branchId) {
+        branchAccessGuard.check(staffId, branchId);
         return reservationRepository.findByBranchIdAndStatus(branchId, ReservationStatus.PENDING)
             .stream()
             .map(ReservationResponse::from)
             .toList();
+    }
+
+    private ReservationEntity findAccessible(Integer staffId, Integer reservationId) {
+        ReservationEntity reservation = reservationRepository.findById(reservationId)
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Reservation not found: " + reservationId));
+        branchAccessGuard.check(staffId, reservation.getBranchId());
+        return reservation;
     }
 
     @Override
