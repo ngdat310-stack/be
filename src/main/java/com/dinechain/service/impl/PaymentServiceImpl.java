@@ -9,6 +9,8 @@ import com.dinechain.entity.OrderEntity;
 import com.dinechain.entity.PaymentEntity;
 import com.dinechain.exception.AppException;
 import com.dinechain.exception.ErrorCode;
+import com.dinechain.notification.TakeawayNotifier;
+import com.dinechain.payment.Sepay;
 import com.dinechain.repository.OrderItemRepository;
 import com.dinechain.repository.OrderRepository;
 import com.dinechain.repository.PaymentRepository;
@@ -25,7 +27,8 @@ import java.time.LocalDateTime;
 
 /**
  * Cash: the cashier enters the money the customer handed over and the server works out the change.
- * Bank transfer exists only for web takeaway: the guest transfers to the chain's QR and the cashier confirms it.
+ * Bank transfer exists only for web takeaway: the guest transfers to the chain's QR, then either SePay reports
+ * the money (confirmBankTransfer) or the cashier confirms it by hand.
  * Paying a web takeaway order releases it to the kitchen.
  */
 @Slf4j
@@ -38,6 +41,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final BranchAccessGuard branchAccessGuard;
     private final LoyaltyService loyaltyService;
     private final OrderItemRepository orderItemRepository;
+    private final TakeawayNotifier takeawayNotifier;
 
     @Override
     @Transactional
@@ -79,13 +83,64 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentEntity saved = paymentRepository.save(payment);
 
         if (order.getStatus() == OrderStatus.AWAITING_PAYMENT) {
-            order.setStatus(OrderStatus.OPEN);
-            orderRepository.save(order);
-            orderItemRepository.requeue(order.getId(), LocalDateTime.now());
-            log.info("Web takeaway {} paid: sent to the kitchen", order.getCode());
+            sendToKitchen(order);
         }
         log.info("Order {} paid by {}: total {}", order.getCode(), method, total);
         return PaymentResponse.from(saved);
+    }
+
+    @Override
+    @Transactional
+    public String confirmBankTransfer(String content, BigDecimal amount, String reference) {
+        for (String code : Sepay.orderCodesIn(content)) {
+            Integer id = orderRepository.findByCode(code).map(OrderEntity::getId).orElse(null);
+            if (id == null) {
+                continue;
+            }
+            // Same lock as the cashier and the expiry job: whoever comes second sees the order already settled
+            OrderEntity order = orderRepository.findByIdForUpdate(id).orElseThrow();
+            if (order.getPayMethod() != PaymentMethod.BANK_TRANSFER || order.getPublicToken() == null) {
+                continue;
+            }
+            if (order.getStatus() == OrderStatus.CANCELLED) {
+                // Money for an order that already expired or was cancelled: the counter has to pay it back
+                if (order.getRefundDueAt() == null) {
+                    order.setRefundDueAt(LocalDateTime.now());
+                    orderRepository.save(order);
+                }
+                log.warn("Transfer {} of {} for cancelled order {}: refund due", reference, amount, code);
+                continue;
+            }
+            if (order.getStatus() != OrderStatus.AWAITING_PAYMENT || paymentRepository.findByOrderId(id).isPresent()) {
+                // Already paid (the cashier confirmed this same money by hand, or SePay retried)
+                log.info("Transfer {} of {} for order {} which is {}: already settled", reference, amount, code, order.getStatus());
+                continue;
+            }
+            if (amount == null || amount.compareTo(order.getTotalAmount()) < 0) {
+                log.warn("Transfer {} of {} for order {} is short of {}: left for the cashier", reference, amount, code, order.getTotalAmount());
+                continue;
+            }
+            PaymentEntity payment = new PaymentEntity();
+            payment.setOrderId(id);
+            payment.setMethod(PaymentMethod.BANK_TRANSFER);
+            payment.setAmount(order.getTotalAmount());
+            payment.setStatus(PaymentStatus.PAID);
+            payment.setReferenceCode(reference);
+            paymentRepository.save(payment);
+            sendToKitchen(order);
+            log.info("Order {} paid by bank transfer {} ({}), confirmed by SePay", code, reference, amount);
+            return code;
+        }
+        return null;
+    }
+
+    private void sendToKitchen(OrderEntity order) {
+        order.setStatus(OrderStatus.OPEN);
+        orderRepository.save(order);
+        orderItemRepository.requeue(order.getId(), LocalDateTime.now());
+        log.info("Web takeaway {} paid: sent to the kitchen", order.getCode());
+        // Only ready-made dishes: nothing to cook, the guest can come now
+        takeawayNotifier.notifyIfReady(order);
     }
 
     @Override

@@ -15,4 +15,13 @@ public interface SettingService {
     String uploadTransferQr(Integer staffId, String contentType, byte[] data);
     // The uploaded QR image, if any: [contentType, bytes]
     Optional<StoredImageEntity> getTransferQrImage();
+    // The chain's account guests transfer to; each order then gets its own QR with amount and order code. null when not set
+    BankAccount getBankAccount();
+    BankAccount updateBankAccount(Integer staffId, BankAccount account);
+    // Guests can pick bank transfer when there is a bank account or a QR image
+    boolean transferAvailable();
+
+    // bank: the bank's short name as SePay/VietQR know it (MBBank, Vietcombank, ACB...)
+    record BankAccount(String bank, String accountNumber, String accountName) {
+    }
 }

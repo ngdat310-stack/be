@@ -13,4 +13,8 @@ public interface GuestTakeawayService {
     GuestTableResponse getBranchMenu(Integer branchId);
     WebTakeawayResponse placeOrder(WebTakeawayRequest request);
     WebTakeawayResponse getOrder(String token);
+    // The guest says they have transferred: the order no longer expires, the cashier checks the bank
+    WebTakeawayResponse claimTransfer(String token);
+    void subscribe(String token, String endpoint, String p256dh, String auth);
+    String pushPublicKey();
 }

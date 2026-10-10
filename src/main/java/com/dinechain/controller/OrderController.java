@@ -66,6 +66,22 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrdersByBranch(staffId, branchId));
     }
 
+    @GetMapping("/branch/{branchId}/refunds-due")
+    @Operation(summary = "Đơn chuyển khoản đã huỷ cần hoàn tiền", description = "Khách đã báo chuyển khoản hoặc tiền về sau khi đơn bị huỷ")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize(Roles.CASHIER)
+    public ResponseEntity<List<OrderResponse>> getRefundsDue(@CurrentUser Integer staffId, @PathVariable Integer branchId) {
+        return ResponseEntity.ok(orderService.getRefundsDue(staffId, branchId));
+    }
+
+    @PutMapping("/{orderId}/refund-settled")
+    @Operation(summary = "Đã hoàn tiền cho đơn chuyển khoản bị huỷ")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize(Roles.CASHIER)
+    public ResponseEntity<OrderResponse> settleRefund(@CurrentUser Integer staffId, @PathVariable Integer orderId) {
+        return ResponseEntity.ok(orderService.settleRefund(staffId, orderId));
+    }
+
     @GetMapping("/customer/{customerId}")
     @Operation(summary = "Danh sách đơn hàng theo khách hàng")
     @SecurityRequirement(name = "bearerAuth")

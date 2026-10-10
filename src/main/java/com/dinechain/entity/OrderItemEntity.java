@@ -72,6 +72,10 @@ public class OrderItemEntity {
     @Column(name = "ready_at")
     private LocalDateTime readyAt;
 
+    // Ordered by the guest through the table QR, not by a member of staff
+    @Column(name = "ordered_by_guest", nullable = false)
+    private Boolean orderedByGuest = false;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

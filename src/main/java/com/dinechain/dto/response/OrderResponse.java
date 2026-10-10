@@ -41,6 +41,9 @@ public class OrderResponse {
     private String guestName;
     private String guestPhone;
     private PaymentMethod payMethod;
+    private LocalDateTime transferClaimedAt;
+    // Set while the counter owes the guest a refund for a cancelled transfer order
+    private LocalDateTime refundDueAt;
 
     public static OrderResponse from(OrderEntity entity, List<OrderItemResponse> items) {
         return from(entity, items, null);
@@ -72,6 +75,8 @@ public class OrderResponse {
         response.setGuestName(entity.getGuestName());
         response.setGuestPhone(entity.getGuestPhone());
         response.setPayMethod(entity.getPayMethod());
+        response.setTransferClaimedAt(entity.getTransferClaimedAt());
+        response.setRefundDueAt(entity.getRefundSettledAt() == null ? entity.getRefundDueAt() : null);
         return response;
     }
 }

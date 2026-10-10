@@ -18,6 +18,14 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Integer> {
     List<OrderEntity> findByBranchIdAndStatus(Integer branchId, OrderStatus status);
     List<OrderEntity> findByBranchIdAndStatusInOrderByIdAsc(Integer branchId, List<OrderStatus> statuses);
     Optional<OrderEntity> findByPublicToken(String publicToken);
+
+    Optional<OrderEntity> findByCode(String code);
+
+    List<OrderEntity> findByBranchIdAndRefundDueAtIsNotNullAndRefundSettledAtIsNullOrderByIdAsc(Integer branchId);
+
+    @Query("select o from OrderEntity o where o.status = com.dinechain.constant.OrderStatus.AWAITING_PAYMENT "
+        + "and o.publicToken is not null and o.transferClaimedAt is null and o.openedAt < :cutoff")
+    List<OrderEntity> findExpiredWebTakeaways(@Param("cutoff") LocalDateTime cutoff);
     List<OrderEntity> findByBranchIdAndOpenedAtBetween(Integer branchId, LocalDateTime start, LocalDateTime end);
     List<OrderEntity> findByCustomerId(Integer customerId);
     List<OrderEntity> findByCustomerIdAndBranchId(Integer customerId, Integer branchId);

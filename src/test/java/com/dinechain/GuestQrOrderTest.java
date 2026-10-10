@@ -82,7 +82,9 @@ class GuestQrOrderTest extends IntegrationTestSupport {
         // Staff see it like any other order, and the kitchen queue has the dishes
         mockMvc.perform(get("/orders/branch/" + branch.getId()).with(as(waiter)))
             .andExpect(jsonPath("$", hasSize(1)))
-            .andExpect(jsonPath("$[0].tableId").value(table.getId()));
+            .andExpect(jsonPath("$[0].tableId").value(table.getId()))
+            // flagged so the floor staff's screens ring for dishes nobody on the team entered
+            .andExpect(jsonPath("$[0].items[0].orderedByGuest").value(true));
         mockMvc.perform(get("/public/tables/" + table.getQrToken() + "/order"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items", hasSize(2)))

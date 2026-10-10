@@ -17,6 +17,8 @@ public interface InventoryService {
     List<InventoryResponse> getInventoriesByBranch(Integer staffId, Integer branchId);
     List<InventoryResponse> getLowStockItems(Integer staffId, Integer branchId);
     void deductForDish(Integer branchId, OrderItemEntity item, Integer staffId);
+    // Puts back what deductForDish took, e.g. for a ready-made dish of an order cancelled before it was paid
+    void restockForDish(Integer branchId, OrderItemEntity item, Integer staffId);
     // true when the branch holds every ingredient of the dish's recipe for that many portions (no recipe = true)
     boolean enoughFor(Integer branchId, Integer menuItemId, int portions);
     // Dishes among these that cannot make even one portion from the branch's stock

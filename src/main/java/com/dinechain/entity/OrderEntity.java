@@ -108,6 +108,20 @@ public class OrderEntity {
     @Column(name = "public_token", length = 64, unique = true)
     private String publicToken;
 
+    // When the guest tapped "I have transferred"; the order then waits for the cashier instead of expiring
+    @Column(name = "transfer_claimed_at")
+    private LocalDateTime transferClaimedAt;
+
+    // Cancelled although the guest said they transferred, or the bank reported money after it expired
+    @Column(name = "refund_due_at")
+    private LocalDateTime refundDueAt;
+
+    @Column(name = "refund_settled_at")
+    private LocalDateTime refundSettledAt;
+
+    @Column(name = "refund_settled_by")
+    private Integer refundSettledBy;
+
     @CreationTimestamp
     @Column(name = "opened_at", nullable = false, updatable = false)
     private LocalDateTime openedAt;

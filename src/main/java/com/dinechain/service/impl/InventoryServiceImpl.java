@@ -120,6 +120,26 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    public void restockForDish(Integer branchId, OrderItemEntity item, Integer staffId) {
+        LocalDateTime now = LocalDateTime.now();
+        for (RecipeEntity recipe : recipeRepository.findByMenuItemId(item.getMenuItemId())) {
+            BigDecimal amount = recipe.getQuantity().multiply(BigDecimal.valueOf(item.getQuantity()));
+            if (inventoryRepository.add(branchId, recipe.getIngredientId(), amount, now) == 0) {
+                continue;
+            }
+            StockMovementEntity movement = new StockMovementEntity();
+            movement.setBranchId(branchId);
+            movement.setIngredientId(recipe.getIngredientId());
+            movement.setType(StockMovementType.ADJUSTMENT);
+            movement.setQuantity(amount);
+            movement.setOrderId(item.getOrderId());
+            movement.setNote("Trả lại kho: huỷ " + item.getQuantity() + " x " + item.getItemName());
+            movement.setCreatedBy(staffId);
+            stockMovementRepository.save(movement);
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean enoughFor(Integer branchId, Integer menuItemId, int portions) {
         List<RecipeEntity> recipe = recipeRepository.findByMenuItemId(menuItemId);

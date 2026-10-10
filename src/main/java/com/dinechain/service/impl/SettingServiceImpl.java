@@ -29,6 +29,9 @@ public class SettingServiceImpl implements SettingService {
     private static final int CHAIN_SCOPE = 0;
     private static final String VAT_PERCENT = "VAT_PERCENT";
     private static final String TRANSFER_QR_URL = "TRANSFER_QR_URL";
+    private static final String BANK_CODE = "BANK_CODE";
+    private static final String BANK_ACCOUNT = "BANK_ACCOUNT";
+    private static final String BANK_ACCOUNT_NAME = "BANK_ACCOUNT_NAME";
 
     private final SettingRepository settingRepository;
     private final StoredImageRepository storedImageRepository;
@@ -109,6 +112,46 @@ public class SettingServiceImpl implements SettingService {
     @Transactional(readOnly = true)
     public Optional<StoredImageEntity> getTransferQrImage() {
         return storedImageRepository.findById(TRANSFER_QR_IMAGE);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BankAccount getBankAccount() {
+        String bank = value(BANK_CODE);
+        String number = value(BANK_ACCOUNT);
+        if (bank == null || number == null) {
+            return null;
+        }
+        return new BankAccount(bank, number, value(BANK_ACCOUNT_NAME));
+    }
+
+    @Override
+    @Transactional
+    public BankAccount updateBankAccount(Integer staffId, BankAccount account) {
+        String bank = account == null || account.bank() == null ? "" : account.bank().trim();
+        String number = account == null || account.accountNumber() == null ? "" : account.accountNumber().trim();
+        String name = account == null || account.accountName() == null ? "" : account.accountName().trim();
+        if (bank.isEmpty() != number.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Enter both the bank and the account number, or clear both");
+        }
+        save(staffId, BANK_CODE, "Bank of the account web takeaway guests transfer to", bank);
+        save(staffId, BANK_ACCOUNT, "Account number web takeaway guests transfer to", number);
+        save(staffId, BANK_ACCOUNT_NAME, "Account holder shown to guests", name);
+        log.info("Transfer bank account changed by staff {}", staffId);
+        return getBankAccount();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean transferAvailable() {
+        return getBankAccount() != null || getTransferQrUrl() != null;
+    }
+
+    private String value(String key) {
+        return settingRepository.findByScopeKeyAndSettingKey(CHAIN_SCOPE, key)
+            .map(SettingEntity::getSettingValue)
+            .filter(v -> !v.isBlank())
+            .orElse(null);
     }
 
     private static String sniff(byte[] d) {

@@ -50,6 +50,7 @@ class OrderFlowTest extends IntegrationTestSupport {
             .andExpect(jsonPath("$.staffId").value(cashier.getId()))
             .andExpect(jsonPath("$.items[0].itemName").value("Pho bo"))
             .andExpect(jsonPath("$.items[0].unitPrice").value(55000))
+            .andExpect(jsonPath("$.items[0].orderedByGuest").value(false))
             .andExpect(jsonPath("$.items[0].amount").value(110000))
             .andExpect(jsonPath("$.totalAmount").value(125000));
 

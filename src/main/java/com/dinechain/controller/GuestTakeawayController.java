@@ -11,6 +11,9 @@ import org.springframework.http.MediaType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +61,34 @@ public class GuestTakeawayController {
         + "Đơn chờ thanh toán, thu ngân thu tiền / xác nhận chuyển khoản xong bếp mới nấu")
     public ResponseEntity<WebTakeawayResponse> placeOrder(@Valid @RequestBody WebTakeawayRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(guestTakeawayService.placeOrder(request));
+    }
+
+    public record PushKeys(@NotBlank String p256dh, @NotBlank String auth) {
+    }
+
+    public record PushSubscriptionRequest(@NotBlank @Size(max = 1000) String endpoint, @NotNull @Valid PushKeys keys) {
+    }
+
+    public record PushKey(String publicKey) {
+    }
+
+    @PostMapping("/takeaway-orders/{token}/transferred")
+    @Operation(summary = "Khách báo đã chuyển khoản", description = "Đơn không bị tự huỷ vì quá hạn nữa; thu ngân kiểm tra tiền về rồi xác nhận")
+    public ResponseEntity<WebTakeawayResponse> claimTransfer(@PathVariable String token) {
+        return ResponseEntity.ok(guestTakeawayService.claimTransfer(token));
+    }
+
+    @GetMapping("/push/public-key")
+    @Operation(summary = "Khoá công khai Web Push (VAPID)", description = "Trình duyệt dùng để đăng ký nhận thông báo")
+    public ResponseEntity<PushKey> pushPublicKey() {
+        return ResponseEntity.ok(new PushKey(guestTakeawayService.pushPublicKey()));
+    }
+
+    @PostMapping("/takeaway-orders/{token}/push-subscriptions")
+    @Operation(summary = "Nhận thông báo khi món xong", description = "PushSubscription của trình duyệt (endpoint + keys)")
+    public ResponseEntity<Void> subscribe(@PathVariable String token, @Valid @RequestBody PushSubscriptionRequest request) {
+        guestTakeawayService.subscribe(token, request.endpoint(), request.keys().p256dh(), request.keys().auth());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/takeaway-orders/{token}")

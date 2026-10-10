@@ -2,6 +2,7 @@ package com.dinechain.controller;
 
 import com.dinechain.security.CurrentUser;
 import com.dinechain.security.Roles;
+import com.dinechain.payment.Sepay;
 import com.dinechain.service.SettingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,6 +34,9 @@ import java.math.BigDecimal;
 public class SettingController {
 
     private final SettingService settingService;
+    private final Sepay sepay;
+
+    private static final String WEBHOOK_PATH = "/api/v1/public/sepay/webhook";
 
     public record VatSetting(@NotNull @DecimalMin("0") @DecimalMax("100") BigDecimal percent) {
     }
@@ -41,6 +45,39 @@ public class SettingController {
     public record TransferQrSetting(
         @jakarta.validation.constraints.Pattern(regexp = "^$|^https?://\\S+$|^/api/v1/public/images/\\S+$", message = "Link must start with http:// or https://")
         @jakarta.validation.constraints.Size(max = 1000) String url) {
+    }
+
+    public record BankAccountRequest(
+        @jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9]{0,30}$", message = "Bank: its short name, letters and digits only (MBBank, Vietcombank...)") String bank,
+        @jakarta.validation.constraints.Pattern(regexp = "^\\d{0,20}$", message = "Account number: digits only") String accountNumber,
+        @jakarta.validation.constraints.Size(max = 100) String accountName) {
+    }
+
+    // autoConfirm: SEPAY_API_KEY is set; webhookPath: where to point SePay's webhook
+    public record BankAccountSetting(String bank, String accountNumber, String accountName, boolean autoConfirm, String webhookPath) {
+    }
+
+    @GetMapping("/bank-account")
+    @PreAuthorize(Roles.ADMIN)
+    @Operation(summary = "Tài khoản nhận chuyển khoản", description = "Mỗi đơn mang về có mã QR riêng (số tiền + mã đơn). autoConfirm = đã đặt SEPAY_API_KEY")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BankAccountSetting> getBankAccount() {
+        return ResponseEntity.ok(bankAccountSetting(settingService.getBankAccount()));
+    }
+
+    @PutMapping("/bank-account")
+    @PreAuthorize(Roles.ADMIN)
+    @Operation(summary = "Đổi tài khoản nhận chuyển khoản", description = "{\"bank\": \"MBBank\", \"accountNumber\": \"0123456789\", \"accountName\": \"...\"}; để trống cả hai = bỏ tài khoản")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<BankAccountSetting> updateBankAccount(@CurrentUser Integer staffId, @Valid @RequestBody BankAccountRequest request) {
+        return ResponseEntity.ok(bankAccountSetting(settingService.updateBankAccount(staffId,
+            new SettingService.BankAccount(request.bank(), request.accountNumber(), request.accountName()))));
+    }
+
+    private BankAccountSetting bankAccountSetting(SettingService.BankAccount account) {
+        return account == null
+            ? new BankAccountSetting(null, null, null, sepay.enabled(), WEBHOOK_PATH)
+            : new BankAccountSetting(account.bank(), account.accountNumber(), account.accountName(), sepay.enabled(), WEBHOOK_PATH);
     }
 
     @GetMapping("/transfer-qr")

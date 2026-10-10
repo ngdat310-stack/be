@@ -14,6 +14,7 @@ import com.dinechain.repository.BranchRepository;
 import com.dinechain.repository.OrderItemRepository;
 import com.dinechain.repository.OrderRepository;
 import com.dinechain.security.BranchAccessGuard;
+import com.dinechain.notification.TakeawayNotifier;
 import com.dinechain.service.InventoryService;
 import com.dinechain.service.KitchenService;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ public class KitchenServiceImpl implements KitchenService {
     private final BranchRepository branchRepository;
     private final BranchAccessGuard branchAccessGuard;
     private final InventoryService inventoryService;
+    private final TakeawayNotifier takeawayNotifier;
 
     @Value("${dinechain.kitchen.default-capacity:40}")
     private int defaultCapacity;
@@ -117,6 +119,9 @@ public class KitchenServiceImpl implements KitchenService {
             default -> { }
         }
         orderItemRepository.save(updated);
+        if (to == OrderItemStatus.READY) {
+            takeawayNotifier.notifyIfReady(order);
+        }
 
         log.info("Order item {} of order {}: {} -> {} by staff {}", itemId, order.getCode(), from, to, staffId);
         return KitchenTicketResponse.from(updated, order, now);

@@ -16,7 +16,12 @@ public interface OrderService {
     OrderResponse placeGuestOrder(String qrToken, AddOrderItemsRequest request);
     // Returns the public tracking token of the new order
     String placeWebTakeaway(WebTakeawayRequest request);
+    // Web takeaway never paid within the time limit (and the guest did not say they transferred) is cancelled
+    int cancelExpiredWebTakeaways(int minutes);
     OrderResponse cancelItem(Integer staffId, Integer orderId, Integer itemId, String reason);
     List<OrderResponse> getOrdersByBranch(Integer staffId, Integer branchId);
+    // Cancelled transfer orders the counter still has to pay back
+    List<OrderResponse> getRefundsDue(Integer staffId, Integer branchId);
+    OrderResponse settleRefund(Integer staffId, Integer orderId);
     List<OrderResponse> getOrdersByCustomer(Integer staffId, Integer customerId);
 }

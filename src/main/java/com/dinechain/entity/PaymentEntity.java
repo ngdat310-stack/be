@@ -49,7 +49,8 @@ public class PaymentEntity {
     @Column(name = "reference_code", length = 100)
     private String referenceCode;
 
-    @Column(name = "received_by", nullable = false)
+    // null when the bank confirmed the transfer through the SePay webhook
+    @Column(name = "received_by")
     private Integer receivedBy;
 
     @Column(name = "refunded_by")

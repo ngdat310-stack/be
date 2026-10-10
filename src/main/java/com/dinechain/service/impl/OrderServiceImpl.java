@@ -267,7 +267,10 @@ public class OrderServiceImpl implements OrderService {
             diningTableRepository.updateStatus(table.getId(), TableStatus.OCCUPIED);
         }
         Integer orderId = order.getId();
-        items.forEach(item -> item.setOrderId(orderId));
+        items.forEach(item -> {
+            item.setOrderId(orderId);
+            item.setOrderedByGuest(true);
+        });
         handOutReadyMade(branchId, orderItemRepository.saveAll(items), null);
         recalculate(order);
 
@@ -288,7 +291,7 @@ public class OrderServiceImpl implements OrderService {
         if (request.payMethod() != PaymentMethod.CASH && request.payMethod() != PaymentMethod.BANK_TRANSFER) {
             throw new AppException(ErrorCode.PAYMENT_METHOD_NOT_SUPPORTED);
         }
-        if (request.payMethod() == PaymentMethod.BANK_TRANSFER && settingService.getTransferQrUrl() == null) {
+        if (request.payMethod() == PaymentMethod.BANK_TRANSFER && !settingService.transferAvailable()) {
             throw new AppException(ErrorCode.PAYMENT_METHOD_NOT_SUPPORTED, "Bank transfer is not set up yet: pay cash at the counter");
         }
         checkKitchenAcceptsTakeaway(branch);
@@ -402,6 +405,41 @@ public class OrderServiceImpl implements OrderService {
         return items;
     }
 
+    @Override
+    @Transactional
+    public int cancelExpiredWebTakeaways(int minutes) {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(minutes);
+        int cancelled = 0;
+        for (OrderEntity stale : orderRepository.findExpiredWebTakeaways(cutoff)) {
+            OrderEntity order = orderRepository.findByIdForUpdate(stale.getId()).orElse(null);
+            // Re-checked under the lock: the cashier may have just taken the money or the guest just said they paid
+            if (order == null || order.getStatus() != OrderStatus.AWAITING_PAYMENT || order.getTransferClaimedAt() != null
+                || paymentRepository.existsByOrderIdAndStatus(order.getId(), PaymentStatus.PAID)) {
+                continue;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            restockIfUnpaid(order);
+            orderItemRepository.cancelByOrderId(order.getId(), UNFINISHED_ITEM_STATUSES, now);
+            order.setStatus(OrderStatus.CANCELLED);
+            order.setClosedAt(now);
+            order.setCancelReason("Quá " + minutes + " phút chưa thanh toán");
+            orderRepository.save(order);
+            cancelled++;
+            log.info("Web takeaway {} cancelled: not paid within {} minutes", order.getCode(), minutes);
+        }
+        return cancelled;
+    }
+
+    // Ready-made dishes of an order nobody paid for go back on the shelf
+    private void restockIfUnpaid(OrderEntity order) {
+        if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
+            return;
+        }
+        orderItemRepository.findByOrderId(order.getId()).stream()
+            .filter(i -> !i.getNeedsKitchen() && i.getStatus() != OrderItemStatus.CANCELLED)
+            .forEach(i -> inventoryService.restockForDish(order.getBranchId(), i, null));
+    }
+
     // Ready-made lines leave the stock when ordered, since no cook starts them
     private void handOutReadyMade(Integer branchId, List<OrderItemEntity> saved, Integer staffId) {
         saved.stream().filter(i -> !i.getNeedsKitchen()).forEach(i -> inventoryService.deductForDish(branchId, i, staffId));
@@ -445,6 +483,12 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " has been paid: refund it before cancelling");
         }
         LocalDateTime now = LocalDateTime.now();
+        // The guest said the money left their account: whoever cancels owes them a refund unless it never arrives
+        if (order.getStatus() == OrderStatus.AWAITING_PAYMENT && order.getPayMethod() == PaymentMethod.BANK_TRANSFER
+            && order.getTransferClaimedAt() != null) {
+            order.setRefundDueAt(now);
+        }
+        restockIfUnpaid(order);
         // Take the dishes off the kitchen queue too
         orderItemRepository.cancelByOrderId(orderId, UNFINISHED_ITEM_STATUSES, now);
 
@@ -468,6 +512,27 @@ public class OrderServiceImpl implements OrderService {
         branchAccessGuard.check(staffId, branchId);
         return toResponses(orderRepository.findByBranchIdAndStatusInOrderByIdAsc(branchId,
             List.of(OrderStatus.AWAITING_PAYMENT, OrderStatus.OPEN)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getRefundsDue(Integer staffId, Integer branchId) {
+        branchAccessGuard.check(staffId, branchId);
+        return toResponses(orderRepository.findByBranchIdAndRefundDueAtIsNotNullAndRefundSettledAtIsNullOrderByIdAsc(branchId));
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse settleRefund(Integer staffId, Integer orderId) {
+        OrderEntity order = findOrderForUpdate(staffId, orderId, OrderStatus.CANCELLED);
+        if (order.getRefundDueAt() == null || order.getRefundSettledAt() != null) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " has no refund waiting");
+        }
+        order.setRefundSettledAt(LocalDateTime.now());
+        order.setRefundSettledBy(staffId);
+        orderRepository.save(order);
+        log.info("Refund for cancelled order {} settled by staff {}", order.getCode(), staffId);
+        return toResponse(order, orderItemRepository.findByOrderId(orderId));
     }
 
     @Override

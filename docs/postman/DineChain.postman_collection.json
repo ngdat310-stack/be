@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "536b14dd-1b1e-568f-8487-43444a66fd09",
     "name": "DineChain API",
-    "description": "Đủ 121 API của DineChain, mỗi API một request.\n\nCách dùng: chạy **1. Đăng nhập → Nhân viên đăng nhập** trước (token tự lưu), rồi gọi API bất kỳ.\nMặc định đăng nhập bằng admin (chủ chuỗi, gọi được mọi API). Đổi username trong body để thử vai trò khác: quanly, thungan, phucvu, daubep, kho — mật khẩu chung 12345.\n\nDatabase mới chỉ có 9 chi nhánh: tạo khu vực → bàn (lưu tableId, qrToken), danh mục, món trước khi gọi món. Thư mục \"Khách quét QR gọi món\" không cần token: qrToken lấy từ request Thêm bàn.\n\nRequest \"Tạo ...\" tự lưu id vừa tạo vào biến (orderId, customerId...). Các request Xoá/Ngừng chỉ tác động lên đối tượng vừa tạo trong collection này. Sửa id mặc định ở tab Variables của collection.",
+    "description": "Đủ 129 API của DineChain, mỗi API một request.\n\nCách dùng: chạy **1. Đăng nhập → Nhân viên đăng nhập** trước (token tự lưu), rồi gọi API bất kỳ.\nMặc định đăng nhập bằng admin (chủ chuỗi, gọi được mọi API). Đổi username trong body để thử vai trò khác: quanly, thungan, phucvu, daubep, kho — mật khẩu chung 12345.\n\nDatabase mới chỉ có 9 chi nhánh: tạo khu vực → bàn (lưu tableId, qrToken), danh mục, món trước khi gọi món. Thư mục \"Khách quét QR gọi món\" không cần token: qrToken lấy từ request Thêm bàn.\n\nRequest \"Tạo ...\" tự lưu id vừa tạo vào biến (orderId, customerId...). Các request Xoá/Ngừng chỉ tác động lên đối tượng vừa tạo trong collection này. Sửa id mặc định ở tab Variables của collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1140,6 +1140,40 @@
               }
             }
           }
+        },
+        {
+          "name": "Tài khoản nhận chuyển khoản",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/settings/bank-account",
+            "description": "`GET /settings/bank-account`\n\nMỗi đơn mang về có mã QR riêng (số tiền + mã đơn). autoConfirm = backend đã đặt SEPAY_API_KEY; webhookPath = địa chỉ dán vào SePay"
+          }
+        },
+        {
+          "name": "Đổi tài khoản nhận chuyển khoản",
+          "event": [],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/settings/bank-account",
+            "description": "`PUT /settings/bank-account`\n\nbank là tên viết tắt ngân hàng theo SePay/VietQR (MBBank, Vietcombank...). Để trống cả bank và accountNumber = bỏ tài khoản",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bank\": \"MBBank\",\n  \"accountNumber\": \"0123456789\",\n  \"accountName\": \"CONG TY DINECHAIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         }
       ]
     },
@@ -1299,6 +1333,26 @@
             "header": [],
             "url": "{{baseUrl}}/orders/customer/{{customerId}}",
             "description": "`GET /orders/customer/{customerId}`"
+          }
+        },
+        {
+          "name": "Đơn chuyển khoản đã huỷ cần hoàn tiền",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/orders/branch/{{branchId}}/refunds-due",
+            "description": "`GET /orders/branch/{branchId}/refunds-due`\n\nKhách đã báo chuyển khoản rồi đơn bị huỷ, hoặc SePay báo tiền về sau khi đơn đã huỷ. Quyền: thu ngân"
+          }
+        },
+        {
+          "name": "Đã xử lý hoàn tiền",
+          "event": [],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": "{{baseUrl}}/orders/{{cancelOrderId}}/refund-settled",
+            "description": "`PUT /orders/{cancelOrderId}/refund-settled`\n\nThu ngân đã chuyển trả (hoặc kiểm tra là tiền chưa về). Đơn biến khỏi danh sách cần hoàn tiền"
           }
         }
       ]
@@ -1464,6 +1518,90 @@
             "header": [],
             "url": "{{baseUrl}}/public/images/transfer-qr",
             "description": "`GET /public/images/transfer-qr`\n\nẢnh chủ chuỗi đã tải lên; 404 khi chưa có",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Khách báo đã chuyển khoản",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/public/takeaway-orders/{{takeawayToken}}/transferred",
+            "description": "`POST /public/takeaway-orders/{takeawayToken}/transferred`\n\nChỉ cho đơn chuyển khoản đang chờ thanh toán. Đơn đã báo thì không tự huỷ sau 30 phút; thu ngân thấy nhắc kiểm tra tiền về",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Khoá công khai Web Push",
+          "event": [],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/public/push/public-key",
+            "description": "`GET /public/push/public-key`\n\nKhoá VAPID để trình duyệt đăng ký nhận thông báo",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Đăng ký thông báo món xong",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/public/takeaway-orders/{{takeawayToken}}/push-subscriptions",
+            "description": "`POST /public/takeaway-orders/{takeawayToken}/push-subscriptions`\n\nBody là subscription.toJSON() của trình duyệt. Chỉ nhận endpoint https của dịch vụ push thật (FCM, Mozilla, Windows, Apple). Trả 204",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/...\",\n  \"keys\": {\n    \"p256dh\": \"...\",\n    \"auth\": \"...\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Webhook SePay (giả lập tiền về)",
+          "event": [],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Apikey {{sepayApiKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/public/sepay/webhook",
+            "description": "`POST /public/sepay/webhook`\n\nSePay gọi khi có giao dịch. Header Authorization: Apikey <SEPAY_API_KEY>. Tiền vào đủ, nội dung có mã đơn thì đơn tự thanh toán và xuống bếp. 404 khi backend chưa đặt SEPAY_API_KEY",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": 1,\n  \"gateway\": \"MBBank\",\n  \"accountNumber\": \"0123456789\",\n  \"transferType\": \"in\",\n  \"transferAmount\": 64800,\n  \"content\": \"B1-261010-0001\",\n  \"referenceCode\": \"FT123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "auth": {
               "type": "noauth"
             }
@@ -2477,6 +2615,10 @@
     },
     {
       "key": "cancelPurchaseOrderId",
+      "value": ""
+    },
+    {
+      "key": "sepayApiKey",
       "value": ""
     }
   ]

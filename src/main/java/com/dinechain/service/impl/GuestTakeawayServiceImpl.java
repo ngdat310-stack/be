@@ -21,15 +21,22 @@ import com.dinechain.entity.OrderItemEntity;
 import com.dinechain.repository.OrderItemRepository;
 import com.dinechain.repository.OrderRepository;
 import com.dinechain.repository.PaymentRepository;
+import com.dinechain.repository.PushSubscriptionRepository;
+import com.dinechain.entity.PushSubscriptionEntity;
+import com.dinechain.notification.TakeawayNotifier;
+import com.dinechain.notification.WebPushSender;
 import com.dinechain.service.BranchMenuService;
 import com.dinechain.service.GuestTakeawayService;
 import com.dinechain.service.KitchenService;
 import com.dinechain.service.OrderService;
+import com.dinechain.payment.Sepay;
 import com.dinechain.service.SettingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +58,14 @@ public class GuestTakeawayServiceImpl implements GuestTakeawayService {
     private final KitchenService kitchenService;
     private final OrderService orderService;
     private final SettingService settingService;
+    private final Sepay sepay;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
+    private final TakeawayNotifier takeawayNotifier;
+    private final WebPushSender webPushSender;
+
+    private static final List<String> PUSH_HOSTS = List.of(
+        "fcm.googleapis.com", "updates.push.services.mozilla.com", "push.services.mozilla.com",
+        "notify.windows.com", "push.apple.com");
 
     @Override
     @Transactional(readOnly = true)
@@ -60,7 +75,7 @@ public class GuestTakeawayServiceImpl implements GuestTakeawayService {
             .sorted(Comparator.comparing(BranchEntity::getCode))
             .toList();
         Map<Integer, BranchLoadResponse> loads = kitchenService.computeLoadOfBranches(branches);
-        boolean transfer = settingService.getTransferQrUrl() != null;
+        boolean transfer = settingService.transferAvailable();
         return branches.stream()
             .map(b -> new PublicBranchResponse(b.getId(), b.getCode(), b.getName(), b.getAddress(),
                 loads.get(b.getId()).isAcceptingTakeaway(), loads.get(b.getId()).getEstimatedWaitMinutes(), transfer,
@@ -95,9 +110,11 @@ public class GuestTakeawayServiceImpl implements GuestTakeawayService {
         BranchEntity branch = branchRepository.findById(order.getBranchId()).orElseThrow();
         boolean paid = paymentRepository.existsByOrderIdAndStatus(order.getId(), PaymentStatus.PAID);
         // The QR is only worth showing while the guest still has to transfer
-        String qr = order.getStatus() == OrderStatus.AWAITING_PAYMENT && order.getPayMethod() == PaymentMethod.BANK_TRANSFER
-            ? settingService.getTransferQrUrl()
-            : null;
+        boolean transferring = order.getStatus() == OrderStatus.AWAITING_PAYMENT && order.getPayMethod() == PaymentMethod.BANK_TRANSFER;
+        SettingService.BankAccount account = transferring ? settingService.getBankAccount() : null;
+        String qr = !transferring ? null
+            : account != null ? Sepay.qrUrl(account, order.getTotalAmount(), order.getCode())
+            : settingService.getTransferQrUrl();
         List<OrderItemEntity> lines = orderItemRepository.findByOrderId(order.getId());
         Map<Integer, String> images = menuItemRepository.imagesOf(lines.stream().map(OrderItemEntity::getMenuItemId).toList());
         List<GuestOrderResponse.Item> items = lines.stream()
@@ -106,6 +123,58 @@ public class GuestTakeawayServiceImpl implements GuestTakeawayService {
             .toList();
         return new WebTakeawayResponse(order.getPublicToken(), order.getCode(), branch.getName(), branch.getAddress(),
             order.getGuestName(), order.getStatus(), order.getPayMethod(), paid, qr,
-            order.getSubtotal(), order.getVatAmount(), order.getTotalAmount(), items);
+            order.getSubtotal(), order.getVatAmount(), order.getTotalAmount(), items,
+            order.getTransferClaimedAt() != null, order.getCancelReason(),
+            account, account != null && sepay.enabled());
+    }
+
+    @Override
+    @Transactional
+    public WebTakeawayResponse claimTransfer(String token) {
+        OrderEntity order = orderRepository.findByPublicToken(token)
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Unknown takeaway order"));
+        if (order.getStatus() != OrderStatus.AWAITING_PAYMENT || order.getPayMethod() != PaymentMethod.BANK_TRANSFER) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " is not waiting for a transfer");
+        }
+        if (order.getTransferClaimedAt() == null) {
+            order.setTransferClaimedAt(LocalDateTime.now());
+            orderRepository.save(order);
+        }
+        return getOrder(token);
+    }
+
+    @Override
+    @Transactional
+    public void subscribe(String token, String endpoint, String p256dh, String auth) {
+        OrderEntity order = orderRepository.findByPublicToken(token)
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Unknown takeaway order"));
+        if (!isPushService(endpoint)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Not a browser push service");
+        }
+        PushSubscriptionEntity subscription = pushSubscriptionRepository.findByOrderIdAndEndpoint(order.getId(), endpoint)
+            .orElseGet(PushSubscriptionEntity::new);
+        subscription.setOrderId(order.getId());
+        subscription.setEndpoint(endpoint);
+        subscription.setP256dh(p256dh);
+        subscription.setAuth(auth);
+        pushSubscriptionRepository.save(subscription);
+        // Subscribed after the food was already done: tell them straight away
+        takeawayNotifier.notifyIfReady(order);
+    }
+
+    @Override
+    public String pushPublicKey() {
+        return webPushSender.publicKey();
+    }
+
+    // The server only ever posts to the browsers' own push services, never to an address a caller picked
+    private static boolean isPushService(String endpoint) {
+        try {
+            URI uri = URI.create(endpoint);
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+            return "https".equals(uri.getScheme()) && PUSH_HOSTS.stream().anyMatch(h -> host.equals(h) || host.endsWith("." + h));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }

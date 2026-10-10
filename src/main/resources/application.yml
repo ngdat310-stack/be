@@ -65,6 +65,12 @@ dinechain:
     earn-per: 10000
     # VND one point is worth when spent
     point-value: 1000
+  takeaway:
+    # Web takeaway not paid within this many minutes is cancelled (unless the guest said they transferred)
+    payment-timeout-minutes: ${TAKEAWAY_PAYMENT_TIMEOUT_MINUTES:30}
+  sepay:
+    # API key set on the SePay webhook (Authorization: Apikey <key>). Empty = webhook off, the cashier confirms transfers
+    api-key: ${SEPAY_API_KEY:}
   kitchen:
     # Max dish portions waiting/cooking per branch before takeaway & delivery are paused.
     # Override per branch with branches.kitchen_capacity (PUT /branches/{id}).

@@ -24,6 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class WebTakeawayTest extends IntegrationTestSupport {
 
+    @org.springframework.beans.factory.annotation.Autowired org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    @org.springframework.beans.factory.annotation.Autowired com.dinechain.service.OrderService orderService;
+
     private static final String QR = "https://example.com/my-bank-qr.png";
 
     private BranchEntity branch;
@@ -169,6 +172,41 @@ class WebTakeawayTest extends IntegrationTestSupport {
             .andExpect(status().isBadRequest());
         mockMvc.perform(multipart(HttpMethod.PUT, "/settings/transfer-qr/image").file(new MockMultipartFile("file", "qr.png", "image/png", png)).with(as(cashier)))
             .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unpaidWebTakeawayExpiresUnlessTheGuestSaidTheyTransferred() throws Exception {
+        String claimedToken = JsonPath.read(order("BANK_TRANSFER").andReturn().getResponse().getContentAsString(), "$.token");
+        mockMvc.perform(post("/public/takeaway-orders/" + claimedToken + "/transferred"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.transferClaimed").value(true));
+        String forgottenToken = JsonPath.read(order("CASH").andReturn().getResponse().getContentAsString(), "$.token");
+
+        // Both placed 31 minutes ago
+        jdbcTemplate.update("update orders set opened_at = now() - interval '31 minutes' where public_token in (?, ?)", claimedToken, forgottenToken);
+        orderService.cancelExpiredWebTakeaways(30);
+
+        mockMvc.perform(get("/public/takeaway-orders/" + forgottenToken))
+            .andExpect(jsonPath("$.status").value("CANCELLED"))
+            .andExpect(jsonPath("$.cancelReason").value("Quá 30 phút chưa thanh toán"));
+        mockMvc.perform(get("/public/takeaway-orders/" + claimedToken))
+            .andExpect(jsonPath("$.status").value("AWAITING_PAYMENT"));
+        // The cashier sees which unpaid orders the guest claims to have paid
+        mockMvc.perform(get("/orders/branch/" + branch.getId()).with(as(cashier)))
+            .andExpect(jsonPath("$[0].transferClaimedAt").exists());
+    }
+
+    @Test
+    void guestsSubscribeToPushOnlyWithARealPushService() throws Exception {
+        String token = JsonPath.read(order("CASH").andReturn().getResponse().getContentAsString(), "$.token");
+        mockMvc.perform(get("/public/push/public-key")).andExpect(jsonPath("$.publicKey").isString());
+        mockMvc.perform(post("/public/takeaway-orders/" + token + "/push-subscriptions").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/abc\",\"keys\":{\"p256dh\":\"BNcR\",\"auth\":\"tBH\"}}"))
+            .andExpect(status().isNoContent());
+        // Never let the server be pointed at an arbitrary address
+        mockMvc.perform(post("/public/takeaway-orders/" + token + "/push-subscriptions").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"endpoint\":\"http://127.0.0.1:8080/api/v1/orders\",\"keys\":{\"p256dh\":\"BNcR\",\"auth\":\"tBH\"}}"))
+            .andExpect(status().isBadRequest());
     }
 
     private ResultActions order(String payMethod) throws Exception {
