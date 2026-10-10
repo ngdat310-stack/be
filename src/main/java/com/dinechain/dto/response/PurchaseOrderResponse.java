@@ -4,6 +4,7 @@ import com.dinechain.constant.PurchaseOrderStatus;
 import com.dinechain.entity.IngredientEntity;
 import com.dinechain.entity.PurchaseOrderEntity;
 import com.dinechain.entity.PurchaseOrderItemEntity;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,6 +38,7 @@ public class PurchaseOrderResponse {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(name = "PurchaseOrderLine")
     public static class Item {
         private Integer id;
         private Integer ingredientId;

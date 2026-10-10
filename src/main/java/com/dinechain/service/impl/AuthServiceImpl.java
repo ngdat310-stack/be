@@ -12,7 +12,7 @@ import com.dinechain.exception.AppException;
 import com.dinechain.exception.ErrorCode;
 import com.dinechain.repository.RefreshTokenRepository;
 import com.dinechain.repository.StaffRepository;
-import com.dinechain.security.JwtService;
+import com.dinechain.security.jwt.JwtService;
 import com.dinechain.security.LoginAttemptGuard;
 import com.dinechain.service.AuthService;
 import lombok.RequiredArgsConstructor;

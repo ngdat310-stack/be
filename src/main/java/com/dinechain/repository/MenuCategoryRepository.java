@@ -10,4 +10,5 @@ import java.util.Optional;
 @Repository
 public interface MenuCategoryRepository extends JpaRepository<MenuCategoryEntity, Integer> {
     List<MenuCategoryEntity> findByNameContainingIgnoreCase(String name);
+    List<MenuCategoryEntity> findByIsActiveTrueOrderBySortOrderAscNameAsc();
 }

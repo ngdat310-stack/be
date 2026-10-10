@@ -2,6 +2,7 @@ package com.dinechain.service.impl;
 
 import com.dinechain.constant.KitchenLoadStatus;
 import com.dinechain.constant.OrderItemStatus;
+import com.dinechain.constant.OrderStatus;
 import com.dinechain.dto.response.BranchLoadResponse;
 import com.dinechain.dto.response.KitchenTicketResponse;
 import com.dinechain.entity.BranchEntity;
@@ -94,6 +95,9 @@ public class KitchenServiceImpl implements KitchenService {
         OrderEntity order = orderRepository.findById(item.getOrderId())
             .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Order not found: " + item.getOrderId()));
         branchAccessGuard.check(staffId, order.getBranchId());
+        if (order.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " has not been paid yet");
+        }
 
         // Atomic check-and-update: when two cooks tap the same dish, exactly one wins
         LocalDateTime now = LocalDateTime.now();

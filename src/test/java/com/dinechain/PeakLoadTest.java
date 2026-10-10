@@ -15,7 +15,7 @@ import com.dinechain.repository.DiningTableRepository;
 import com.dinechain.repository.MenuCategoryRepository;
 import com.dinechain.repository.MenuItemRepository;
 import com.dinechain.repository.StaffRepository;
-import com.dinechain.security.JwtService;
+import com.dinechain.security.jwt.JwtService;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;

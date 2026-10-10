@@ -12,5 +12,7 @@ import java.util.Optional;
 public interface BranchMenuItemRepository extends JpaRepository<BranchMenuItemEntity, Integer> {
     List<BranchMenuItemEntity> findByBranchIdAndMenuItemIdIn(Integer branchId, Collection<Integer> menuItemIds);
     List<BranchMenuItemEntity> findByBranchId(Integer branchId);
+    List<BranchMenuItemEntity> findByMenuItemId(Integer menuItemId);
+    List<BranchMenuItemEntity> findByOfferedFalse();
     Optional<BranchMenuItemEntity> findByBranchIdAndMenuItemId(Integer branchId, Integer menuItemId);
 }

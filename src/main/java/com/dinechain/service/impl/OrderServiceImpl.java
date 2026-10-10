@@ -4,16 +4,19 @@ import com.dinechain.constant.BranchStatus;
 import com.dinechain.constant.OrderItemStatus;
 import com.dinechain.constant.OrderStatus;
 import com.dinechain.constant.OrderType;
+import com.dinechain.constant.PaymentMethod;
 import com.dinechain.constant.PaymentStatus;
 import com.dinechain.constant.StaffRole;
 import com.dinechain.constant.TableStatus;
 import com.dinechain.dto.request.AddOrderItemsRequest;
 import com.dinechain.dto.request.CreateOrderRequest;
+import com.dinechain.dto.request.WebTakeawayRequest;
 import com.dinechain.dto.response.BranchLoadResponse;
 import com.dinechain.dto.response.OrderItemResponse;
 import com.dinechain.dto.response.OrderResponse;
 import com.dinechain.entity.BranchEntity;
 import com.dinechain.entity.BranchMenuItemEntity;
+import com.dinechain.entity.DiningTableEntity;
 import com.dinechain.entity.MenuItemEntity;
 import com.dinechain.entity.OrderEntity;
 import com.dinechain.entity.OrderItemEntity;
@@ -21,6 +24,7 @@ import com.dinechain.entity.PromotionEntity;
 import com.dinechain.entity.StaffEntity;
 import com.dinechain.exception.AppException;
 import com.dinechain.exception.ErrorCode;
+import com.dinechain.repository.AreaRepository;
 import com.dinechain.repository.BranchMenuItemRepository;
 import com.dinechain.repository.BranchRepository;
 import com.dinechain.repository.CustomerRepository;
@@ -31,6 +35,7 @@ import com.dinechain.repository.OrderRepository;
 import com.dinechain.repository.PaymentRepository;
 import com.dinechain.repository.StaffRepository;
 import com.dinechain.security.BranchAccessGuard;
+import com.dinechain.service.InventoryService;
 import com.dinechain.service.KitchenService;
 import com.dinechain.service.LoyaltyService;
 import com.dinechain.service.OrderCodeGenerator;
@@ -48,6 +53,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -77,6 +83,8 @@ public class OrderServiceImpl implements OrderService {
     private final PromotionService promotionService;
     private final LoyaltyService loyaltyService;
     private final SettingService settingService;
+    private final AreaRepository areaRepository;
+    private final InventoryService inventoryService;
 
     @Override
     @Transactional
@@ -126,6 +134,7 @@ public class OrderServiceImpl implements OrderService {
 
         items.forEach(item -> item.setOrderId(savedOrder.getId()));
         List<OrderItemEntity> savedItems = orderItemRepository.saveAll(items);
+        handOutReadyMade(branchId, savedItems, staffId);
         if (dineIn) {
             diningTableRepository.updateStatus(savedOrder.getTableId(), TableStatus.OCCUPIED);
         }
@@ -222,11 +231,87 @@ public class OrderServiceImpl implements OrderService {
         }
         List<OrderItemEntity> items = buildItems(order.getBranchId(), request.getItems());
         items.forEach(item -> item.setOrderId(orderId));
-        orderItemRepository.saveAll(items);
+        handOutReadyMade(order.getBranchId(), orderItemRepository.saveAll(items), staffId);
         recalculate(order);
 
         log.info("Added {} dishes to order {}", items.size(), order.getCode());
         return toResponse(order, orderItemRepository.findByOrderId(orderId));
+    }
+
+    // A guest scanned the QR on the table: the dishes join the table's open bill, or open one, and go straight to the kitchen
+    @Override
+    @Transactional
+    public OrderResponse placeGuestOrder(String qrToken, AddOrderItemsRequest request) {
+        DiningTableEntity table = diningTableRepository.findByQrTokenForUpdate(qrToken)
+            .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Unknown table QR code"));
+        Integer branchId = areaRepository.findById(table.getAreaId()).orElseThrow().getBranchId();
+        BranchEntity branch = branchRepository.findById(branchId).orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+        if (branch.getStatus() != BranchStatus.ACTIVE) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Branch " + branch.getCode() + " is not taking orders");
+        }
+
+        OrderEntity order = orderRepository.findFirstByTableIdAndStatusOrderByIdDesc(table.getId(), OrderStatus.OPEN)
+            .filter(open -> !paymentRepository.existsByOrderIdAndStatus(open.getId(), PaymentStatus.PAID))
+            .orElse(null);
+        List<OrderItemEntity> items = buildItems(branchId, request.getItems());
+        if (order == null) {
+            order = new OrderEntity();
+            order.setCode(orderCodeGenerator.next(branchId));
+            order.setBranchId(branchId);
+            order.setType(OrderType.DINE_IN);
+            order.setTableId(table.getId());
+            order.setStatus(OrderStatus.OPEN);
+            order.setPointsUsed(0);
+            price(order, BigDecimal.ZERO);
+            order = orderRepository.save(order);
+            diningTableRepository.updateStatus(table.getId(), TableStatus.OCCUPIED);
+        }
+        Integer orderId = order.getId();
+        items.forEach(item -> item.setOrderId(orderId));
+        handOutReadyMade(branchId, orderItemRepository.saveAll(items), null);
+        recalculate(order);
+
+        log.info("Guest at table {} ordered {} dishes on {}", table.getName(), items.size(), order.getCode());
+        return toResponse(order, orderItemRepository.findByOrderId(orderId));
+    }
+
+    // Takeaway ordered on the website: priced like any order, but held as AWAITING_PAYMENT so the kitchen only
+    // cooks it once the cashier took the cash or saw the transfer arrive
+    @Override
+    @Transactional
+    public String placeWebTakeaway(WebTakeawayRequest request) {
+        BranchEntity branch = branchRepository.findByIdForUpdate(request.branchId())
+            .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+        if (branch.getStatus() != BranchStatus.ACTIVE) {
+            throw new AppException(ErrorCode.INVALID_STATE, "Branch " + branch.getCode() + " is not taking orders");
+        }
+        if (request.payMethod() != PaymentMethod.CASH && request.payMethod() != PaymentMethod.BANK_TRANSFER) {
+            throw new AppException(ErrorCode.PAYMENT_METHOD_NOT_SUPPORTED);
+        }
+        if (request.payMethod() == PaymentMethod.BANK_TRANSFER && settingService.getTransferQrUrl() == null) {
+            throw new AppException(ErrorCode.PAYMENT_METHOD_NOT_SUPPORTED, "Bank transfer is not set up yet: pay cash at the counter");
+        }
+        checkKitchenAcceptsTakeaway(branch);
+
+        List<OrderItemEntity> items = buildItems(branch.getId(), request.items());
+        OrderEntity order = new OrderEntity();
+        order.setCode(orderCodeGenerator.next(branch.getId()));
+        order.setBranchId(branch.getId());
+        order.setType(OrderType.TAKEAWAY);
+        order.setStatus(OrderStatus.AWAITING_PAYMENT);
+        order.setGuestName(request.guestName().trim());
+        order.setGuestPhone(request.guestPhone().trim());
+        order.setPayMethod(request.payMethod());
+        order.setPublicToken(UUID.randomUUID().toString().replace("-", ""));
+        order.setNote(request.notes());
+        order.setPointsUsed(0);
+        price(order, items.stream().map(OrderItemEntity::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+        OrderEntity saved = orderRepository.save(order);
+        items.forEach(item -> item.setOrderId(saved.getId()));
+        handOutReadyMade(branch.getId(), orderItemRepository.saveAll(items), null);
+
+        log.info("Web takeaway {} at branch {} waits for {} payment", saved.getCode(), branch.getCode(), request.payMethod());
+        return saved.getPublicToken();
     }
 
     // A dish not started yet can be dropped by the floor staff; once the kitchen is on it only a manager may,
@@ -282,6 +367,9 @@ public class OrderServiceImpl implements OrderService {
             }
             // A dish from the chain menu is sold at every branch unless the branch turned it off
             BranchMenuItemEntity override = branchOverrides.get(menuItem.getId());
+            if (override != null && !Boolean.TRUE.equals(override.getOffered())) {
+                throw new AppException(ErrorCode.MENU_ITEM_UNAVAILABLE, menuItem.getName() + " is not sold at this branch");
+            }
             if (override != null && !Boolean.TRUE.equals(override.getIsAvailable())) {
                 throw new AppException(ErrorCode.MENU_ITEM_UNAVAILABLE, menuItem.getName() + " is sold out at this branch");
             }
@@ -293,11 +381,30 @@ public class OrderServiceImpl implements OrderService {
             item.setUnitPrice(unitPrice);
             item.setQuantity(itemReq.getQuantity());
             item.setAmount(unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
-            item.setStatus(OrderItemStatus.PENDING);
             item.setNote(itemReq.getNotes());
+            // Drinks and ready-made dishes skip the kitchen: ready to hand out the moment they are ordered
+            boolean kitchen = !Boolean.FALSE.equals(menuItem.getNeedsKitchen());
+            item.setNeedsKitchen(kitchen);
+            item.setStatus(kitchen ? OrderItemStatus.PENDING : OrderItemStatus.READY);
+            if (!kitchen) {
+                item.setReadyAt(LocalDateTime.now());
+            }
             items.add(item);
         }
+        // A ready-made dish linked to stock can only be sold while the stock lasts
+        Map<Integer, Integer> readyMade = items.stream().filter(i -> !i.getNeedsKitchen())
+            .collect(Collectors.groupingBy(OrderItemEntity::getMenuItemId, Collectors.summingInt(OrderItemEntity::getQuantity)));
+        readyMade.forEach((menuItemId, portions) -> {
+            if (!inventoryService.enoughFor(branchId, menuItemId, portions)) {
+                throw new AppException(ErrorCode.MENU_ITEM_UNAVAILABLE, menuItems.get(menuItemId).getName() + " is out of stock at this branch");
+            }
+        });
         return items;
+    }
+
+    // Ready-made lines leave the stock when ordered, since no cook starts them
+    private void handOutReadyMade(Integer branchId, List<OrderItemEntity> saved, Integer staffId) {
+        saved.stream().filter(i -> !i.getNeedsKitchen()).forEach(i -> inventoryService.deductForDish(branchId, i, staffId));
     }
 
     @Override
@@ -333,7 +440,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(Integer staffId, Integer orderId) {
-        OrderEntity order = findOpenOrder(staffId, orderId);
+        OrderEntity order = findOrderForUpdate(staffId, orderId, OrderStatus.OPEN, OrderStatus.AWAITING_PAYMENT);
         if (paymentRepository.existsByOrderIdAndStatus(orderId, PaymentStatus.PAID)) {
             throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " has been paid: refund it before cancelling");
         }
@@ -359,7 +466,8 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponse> getOrdersByBranch(Integer staffId, Integer branchId) {
         branchAccessGuard.check(staffId, branchId);
-        return toResponses(orderRepository.findByBranchIdAndStatus(branchId, OrderStatus.OPEN));
+        return toResponses(orderRepository.findByBranchIdAndStatusInOrderByIdAsc(branchId,
+            List.of(OrderStatus.AWAITING_PAYMENT, OrderStatus.OPEN)));
     }
 
     @Override
@@ -380,10 +488,14 @@ public class OrderServiceImpl implements OrderService {
 
     // Row lock: complete, cancel and payment of the same order cannot interleave
     private OrderEntity findOpenOrder(Integer staffId, Integer orderId) {
+        return findOrderForUpdate(staffId, orderId, OrderStatus.OPEN);
+    }
+
+    private OrderEntity findOrderForUpdate(Integer staffId, Integer orderId, OrderStatus... allowed) {
         OrderEntity order = orderRepository.findByIdForUpdate(orderId)
             .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Order not found: " + orderId));
         branchAccessGuard.check(staffId, order.getBranchId());
-        if (order.getStatus() != OrderStatus.OPEN) {
+        if (!List.of(allowed).contains(order.getStatus())) {
             throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " is already " + order.getStatus());
         }
         return order;

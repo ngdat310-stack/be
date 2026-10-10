@@ -4,7 +4,7 @@ import com.dinechain.constant.StaffRole;
 import com.dinechain.constant.StaffStatus;
 import com.dinechain.entity.BranchEntity;
 import com.dinechain.entity.StaffEntity;
-import com.dinechain.security.JwtService;
+import com.dinechain.security.jwt.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

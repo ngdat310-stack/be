@@ -44,6 +44,11 @@ public class MenuItemEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    // false = drink or ready-made dish: served straight away, never shown to the kitchen
+    @Builder.Default
+    @Column(name = "needs_kitchen", nullable = false)
+    private Boolean needsKitchen = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

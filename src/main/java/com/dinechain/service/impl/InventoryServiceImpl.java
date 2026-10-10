@@ -1,7 +1,10 @@
 package com.dinechain.service.impl;
 
 import com.dinechain.constant.StockMovementType;
+import com.dinechain.dto.request.StockImportRequest;
 import com.dinechain.dto.request.UpdateInventoryRequest;
+import com.dinechain.dto.response.StockImportResponse;
+import com.dinechain.entity.IngredientEntity;
 import com.dinechain.dto.response.InventoryResponse;
 import com.dinechain.entity.BranchInventoryEntity;
 import com.dinechain.entity.OrderItemEntity;
@@ -10,6 +13,7 @@ import com.dinechain.entity.StockMovementEntity;
 import com.dinechain.exception.AppException;
 import com.dinechain.exception.ErrorCode;
 import com.dinechain.repository.BranchInventoryRepository;
+import com.dinechain.repository.IngredientRepository;
 import com.dinechain.repository.RecipeRepository;
 import com.dinechain.repository.StockMovementRepository;
 import com.dinechain.security.BranchAccessGuard;
@@ -22,7 +26,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -33,6 +43,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final RecipeRepository recipeRepository;
     private final StockMovementRepository stockMovementRepository;
     private final BranchAccessGuard branchAccessGuard;
+    private final IngredientRepository ingredientRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -106,6 +117,102 @@ public class InventoryServiceImpl implements InventoryService {
             movement.setCreatedBy(staffId);
             stockMovementRepository.save(movement);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean enoughFor(Integer branchId, Integer menuItemId, int portions) {
+        List<RecipeEntity> recipe = recipeRepository.findByMenuItemId(menuItemId);
+        if (recipe.isEmpty()) {
+            return true;
+        }
+        Map<Integer, BigDecimal> stock = stockOf(branchId);
+        BigDecimal times = BigDecimal.valueOf(portions);
+        return recipe.stream().allMatch(r -> stock.getOrDefault(r.getIngredientId(), BigDecimal.ZERO)
+            .compareTo(r.getQuantity().multiply(times)) >= 0);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<Integer> outOfStock(Integer branchId, Collection<Integer> menuItemIds) {
+        if (menuItemIds.isEmpty()) {
+            return Set.of();
+        }
+        Map<Integer, BigDecimal> stock = stockOf(branchId);
+        return recipeRepository.findByMenuItemIdIn(menuItemIds).stream()
+            .filter(r -> stock.getOrDefault(r.getIngredientId(), BigDecimal.ZERO).compareTo(r.getQuantity()) < 0)
+            .map(RecipeEntity::getMenuItemId)
+            .collect(Collectors.toSet());
+    }
+
+    @Override
+    @Transactional
+    public StockImportResponse importStock(Integer staffId, Integer branchId, List<StockImportRequest.Row> rows) {
+        branchAccessGuard.check(staffId, branchId);
+        // Ingredients are matched by name, ignoring case and spacing, so a re-import updates instead of duplicating
+        Map<String, IngredientEntity> byName = new HashMap<>();
+        for (IngredientEntity i : ingredientRepository.findAll()) {
+            byName.put(key(i.getName()), i);
+        }
+        int created = 0;
+        int updated = 0;
+        LocalDateTime now = LocalDateTime.now();
+        for (StockImportRequest.Row row : rows) {
+            IngredientEntity ingredient = byName.get(key(row.name()));
+            if (ingredient == null) {
+                if (row.unit() == null || row.unit().isBlank()) {
+                    throw new AppException(ErrorCode.INVALID_REQUEST, "Unit is required for the new ingredient " + row.name().trim());
+                }
+                ingredient = new IngredientEntity();
+                ingredient.setCode(nextCode());
+                ingredient.setName(row.name().trim());
+                ingredient.setUnit(row.unit().trim());
+                ingredient.setMinStock(row.minStock() != null ? row.minStock() : BigDecimal.ZERO);
+                ingredient = ingredientRepository.save(ingredient);
+                byName.put(key(ingredient.getName()), ingredient);
+                created++;
+            } else if (row.minStock() != null) {
+                ingredient.setMinStock(row.minStock());
+                ingredientRepository.save(ingredient);
+            }
+
+            inventoryRepository.createIfAbsent(branchId, ingredient.getId(), now);
+            BranchInventoryEntity inventory = findInventory(branchId, ingredient.getId());
+            BigDecimal difference = row.quantity().subtract(inventory.getQuantity());
+            if (difference.signum() != 0) {
+                StockMovementEntity movement = new StockMovementEntity();
+                movement.setBranchId(branchId);
+                movement.setIngredientId(ingredient.getId());
+                movement.setType(StockMovementType.ADJUSTMENT);
+                movement.setQuantity(difference);
+                movement.setNote("Kiểm kho / nhập từ file");
+                movement.setCreatedBy(staffId);
+                stockMovementRepository.save(movement);
+            }
+            inventory.setQuantity(row.quantity());
+            inventoryRepository.save(inventory);
+            updated++;
+        }
+        log.info("Branch {}: stock import by staff {}, {} rows, {} new ingredients", branchId, staffId, rows.size(), created);
+        return new StockImportResponse(created, updated);
+    }
+
+    private Map<Integer, BigDecimal> stockOf(Integer branchId) {
+        return inventoryRepository.findByBranchId(branchId).stream()
+            .collect(Collectors.toMap(BranchInventoryEntity::getIngredientId, BranchInventoryEntity::getQuantity));
+    }
+
+    private static String key(String name) {
+        return name.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    }
+
+    // NL0001, NL0002…: the first free code
+    private String nextCode() {
+        long n = ingredientRepository.count() + 1;
+        while (ingredientRepository.findByCode(String.format("NL%04d", n)).isPresent()) {
+            n++;
+        }
+        return String.format("NL%04d", n);
     }
 
     private BranchInventoryEntity findInventory(Integer branchId, Integer ingredientId) {

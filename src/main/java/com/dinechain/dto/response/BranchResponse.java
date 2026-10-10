@@ -20,6 +20,8 @@ public class BranchResponse {
     private String address;
     private String city;
     private String phone;
+    private Double latitude;
+    private Double longitude;
     private LocalDateTime openTime;
     private LocalDateTime closeTime;
     private Integer managerId;
@@ -36,6 +38,8 @@ public class BranchResponse {
         response.setAddress(entity.getAddress());
         response.setCity(entity.getCity());
         response.setPhone(entity.getPhone());
+        response.setLatitude(entity.getLatitude());
+        response.setLongitude(entity.getLongitude());
         response.setOpenTime(entity.getOpenTime());
         response.setCloseTime(entity.getCloseTime());
         response.setManagerId(entity.getManagerId());

@@ -24,4 +24,10 @@ public class BranchMenuItemResponse {
     // What the customer pays here
     private BigDecimal price;
     private boolean available;
+    // Photo of the dish from the chain menu, null when none was set
+    private String imageUrl;
+    // false = drink / ready-made: handed out by the floor staff, not cooked
+    private boolean needsKitchen;
+    // Ready-made dish whose stock at this branch cannot make one more portion (counted in available = false)
+    private boolean outOfStock;
 }

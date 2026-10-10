@@ -19,7 +19,8 @@ public interface OrderItemRepository extends JpaRepository<OrderItemEntity, Inte
     List<OrderItemEntity> findByOrderIdIn(Collection<Integer> orderIds);
 
     @Query("select i from OrderItemEntity i join OrderEntity o on o.id = i.orderId "
-        + "where o.branchId = :branchId and i.status in :statuses order by i.orderedAt, i.id")
+        + "where o.branchId = :branchId and i.status in :statuses and o.status <> com.dinechain.constant.OrderStatus.AWAITING_PAYMENT"
+        + " and i.needsKitchen = true order by i.orderedAt, i.id")
     List<OrderItemEntity> findKitchenQueue(@Param("branchId") Integer branchId,
                                            @Param("statuses") Collection<OrderItemStatus> statuses);
 
@@ -35,27 +36,34 @@ public interface OrderItemRepository extends JpaRepository<OrderItemEntity, Inte
     int cancelByOrderId(@Param("orderId") Integer orderId, @Param("statuses") Collection<OrderItemStatus> statuses,
                         @Param("now") LocalDateTime now);
 
+    // Paid web takeaway joins the kitchen queue at the moment it was paid, not when it was ordered
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update OrderItemEntity i set i.orderedAt = :now where i.orderId = :orderId")
+    int requeue(@Param("orderId") Integer orderId, @Param("now") LocalDateTime now);
+
     long countByOrderIdAndStatusIn(Integer orderId, Collection<OrderItemStatus> statuses);
 
     // Portions waiting or cooking in one branch
     @Query("select coalesce(sum(i.quantity), 0) from OrderItemEntity i join OrderEntity o on o.id = i.orderId "
-        + "where o.branchId = :branchId and i.status in :statuses")
+        + "where o.branchId = :branchId and i.status in :statuses and o.status <> com.dinechain.constant.OrderStatus.AWAITING_PAYMENT"
+        + " and i.needsKitchen = true")
     long sumQuantityByBranchAndStatus(@Param("branchId") Integer branchId,
                                       @Param("statuses") Collection<OrderItemStatus> statuses);
 
     // Portions the kitchen of one branch finished since a point in time, and when the first of them was finished.
     // One row of [quantity, firstReadyAt]
     @Query("select coalesce(sum(i.quantity), 0), min(i.readyAt) from OrderItemEntity i join OrderEntity o on o.id = i.orderId "
-        + "where o.branchId = :branchId and i.readyAt >= :since")
+        + "where o.branchId = :branchId and i.readyAt >= :since and i.needsKitchen = true")
     List<Object[]> readyStatsSince(@Param("branchId") Integer branchId, @Param("since") LocalDateTime since);
 
     // Same two metrics for every branch at once. Rows of [branchId, status, quantity]
     @Query("select o.branchId, i.status, sum(i.quantity) from OrderItemEntity i join OrderEntity o on o.id = i.orderId "
-        + "where i.status in :statuses group by o.branchId, i.status")
+        + "where i.status in :statuses and o.status <> com.dinechain.constant.OrderStatus.AWAITING_PAYMENT"
+        + " and i.needsKitchen = true group by o.branchId, i.status")
     List<Object[]> sumQuantityByStatusGroupByBranch(@Param("statuses") Collection<OrderItemStatus> statuses);
 
     // Rows of [branchId, quantity, firstReadyAt]
     @Query("select o.branchId, sum(i.quantity), min(i.readyAt) from OrderItemEntity i join OrderEntity o on o.id = i.orderId "
-        + "where i.readyAt >= :since group by o.branchId")
+        + "where i.readyAt >= :since and i.needsKitchen = true group by o.branchId")
     List<Object[]> readyStatsSinceGroupByBranch(@Param("since") LocalDateTime since);
 }

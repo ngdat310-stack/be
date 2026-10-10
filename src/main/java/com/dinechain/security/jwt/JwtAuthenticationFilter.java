@@ -1,8 +1,7 @@
-package com.dinechain.configuration;
+package com.dinechain.security.jwt;
 
 import com.dinechain.constant.StaffStatus;
 import com.dinechain.repository.StaffRepository;
-import com.dinechain.security.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

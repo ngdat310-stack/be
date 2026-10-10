@@ -23,6 +23,7 @@ public class MenuItemResponse {
     private BigDecimal basePrice;
     private String unit;
     private Boolean isActive;
+    private Boolean needsKitchen;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -37,6 +38,7 @@ public class MenuItemResponse {
         response.setBasePrice(entity.getBasePrice());
         response.setUnit(entity.getUnit());
         response.setIsActive(entity.getIsActive());
+        response.setNeedsKitchen(entity.getNeedsKitchen());
         response.setCreatedAt(entity.getCreatedAt());
         response.setUpdatedAt(entity.getUpdatedAt());
         return response;

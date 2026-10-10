@@ -30,7 +30,7 @@ final class TestJwtKeys {
             publicKey = Files.writeString(dir.resolve("public_key.pem"), "-----BEGIN PUBLIC KEY-----\n"
                 + Base64.getMimeEncoder().encodeToString(pair.getPublic().getEncoded()) + "\n-----END PUBLIC KEY-----\n");
         }
-        registry.add("jwt.private-key-path", privateKey::toString);
-        registry.add("jwt.public-key-path", publicKey::toString);
+        registry.add("jwt.private-key-path", () -> privateKey.toUri().toString());
+        registry.add("jwt.public-key-path", () -> publicKey.toUri().toString());
     }
 }

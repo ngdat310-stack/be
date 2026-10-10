@@ -1,5 +1,6 @@
-package com.dinechain.configuration;
+package com.dinechain.security;
 
+import com.dinechain.security.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

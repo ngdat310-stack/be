@@ -28,6 +28,7 @@ public enum ErrorCode {
     DUPLICATE_USERNAME("DUPLICATE_USERNAME", "Username already exists", 409),
     DUPLICATE_EMAIL("DUPLICATE_EMAIL", "Email already exists", 409),
     DUPLICATE_CODE("DUPLICATE_CODE", "Code already exists", 409),
+    DUPLICATE_TABLE_NAME("DUPLICATE_TABLE_NAME", "Another table of this branch already has this name", 409),
 
     // Invalid state
     INVALID_STATE("INVALID_STATE", "Operation not allowed in current state", 409),
@@ -35,7 +36,7 @@ public enum ErrorCode {
     ORDER_NOT_PAID("ORDER_NOT_PAID", "Order has not been paid yet", 409),
     ALREADY_PAID("ALREADY_PAID", "Order has already been paid", 409),
     INSUFFICIENT_CASH("INSUFFICIENT_CASH", "Cash received is less than the order total", 400),
-    PAYMENT_METHOD_NOT_SUPPORTED("PAYMENT_METHOD_NOT_SUPPORTED", "Only cash payments are accepted", 400),
+    PAYMENT_METHOD_NOT_SUPPORTED("PAYMENT_METHOD_NOT_SUPPORTED", "Bank transfer is only for web takeaway orders the guest chose to pay by transfer", 400),
     MENU_ITEM_UNAVAILABLE("MENU_ITEM_UNAVAILABLE", "Menu item is not available at this branch", 409),
     PROMOTION_NOT_APPLICABLE("PROMOTION_NOT_APPLICABLE", "Promotion code cannot be used for this order", 409),
     NOT_ENOUGH_POINTS("NOT_ENOUGH_POINTS", "Customer does not have enough points", 409),

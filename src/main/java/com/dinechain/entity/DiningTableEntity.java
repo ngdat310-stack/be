@@ -4,6 +4,8 @@ import com.dinechain.constant.TableStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "dining_tables", uniqueConstraints = @UniqueConstraint(columnNames = {"area_id", "name"}))
 @Getter
@@ -29,6 +31,14 @@ public class DiningTableEntity {
     @Column(nullable = false)
     private TableStatus status = TableStatus.AVAILABLE;
 
-    @Column(name = "qr_token", length = 64, unique = true)
+    // Printed in the table's QR code; guests who scan it order straight to this table
+    @Column(name = "qr_token", nullable = false, length = 64, unique = true)
     private String qrToken;
+
+    @PrePersist
+    void assignQrToken() {
+        if (qrToken == null) {
+            qrToken = UUID.randomUUID().toString().replace("-", "");
+        }
+    }
 }

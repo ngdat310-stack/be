@@ -105,6 +105,11 @@ public class GlobalExceptionHandler {
         return error(ErrorCode.INVALID_REQUEST, "Malformed request: check the JSON body and parameters");
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooLarge(Exception ex) {
+        return error(ErrorCode.INVALID_REQUEST, "Image must be at most 2 MB");
+    }
+
     // Last line of defence for unique constraints hit by two requests at the same time
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {

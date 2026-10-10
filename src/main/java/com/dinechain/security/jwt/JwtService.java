@@ -1,4 +1,4 @@
-package com.dinechain.security;
+package com.dinechain.security.jwt;
 
 import com.dinechain.entity.StaffEntity;
 

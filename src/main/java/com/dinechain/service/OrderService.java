@@ -2,6 +2,7 @@ package com.dinechain.service;
 
 import com.dinechain.dto.request.AddOrderItemsRequest;
 import com.dinechain.dto.request.CreateOrderRequest;
+import com.dinechain.dto.request.WebTakeawayRequest;
 import com.dinechain.dto.response.OrderResponse;
 
 import java.util.List;
@@ -12,6 +13,9 @@ public interface OrderService {
     OrderResponse completeOrder(Integer staffId, Integer orderId);
     OrderResponse cancelOrder(Integer staffId, Integer orderId);
     OrderResponse addItems(Integer staffId, Integer orderId, AddOrderItemsRequest request);
+    OrderResponse placeGuestOrder(String qrToken, AddOrderItemsRequest request);
+    // Returns the public tracking token of the new order
+    String placeWebTakeaway(WebTakeawayRequest request);
     OrderResponse cancelItem(Integer staffId, Integer orderId, Integer itemId, String reason);
     List<OrderResponse> getOrdersByBranch(Integer staffId, Integer branchId);
     List<OrderResponse> getOrdersByCustomer(Integer staffId, Integer customerId);

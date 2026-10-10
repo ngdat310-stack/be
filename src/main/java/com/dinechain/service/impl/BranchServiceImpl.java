@@ -40,6 +40,8 @@ public class BranchServiceImpl implements BranchService {
             .address(request.getAddress())
             .city(request.getCity())
             .phone(request.getPhone())
+            .latitude(request.getLatitude())
+            .longitude(request.getLongitude())
             .openTime(request.getOpenTime())
             .closeTime(request.getCloseTime())
             .managerId(request.getManagerId())
@@ -70,6 +72,8 @@ public class BranchServiceImpl implements BranchService {
         branch.setAddress(request.getAddress());
         branch.setCity(request.getCity());
         branch.setPhone(request.getPhone());
+        branch.setLatitude(request.getLatitude());
+        branch.setLongitude(request.getLongitude());
         branch.setOpenTime(request.getOpenTime());
         branch.setCloseTime(request.getCloseTime());
         branch.setManagerId(request.getManagerId());

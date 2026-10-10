@@ -1,6 +1,8 @@
 package com.dinechain.controller;
 
+import com.dinechain.dto.request.StockImportRequest;
 import com.dinechain.dto.request.UpdateInventoryRequest;
+import com.dinechain.dto.response.StockImportResponse;
 import com.dinechain.dto.response.InventoryResponse;
 import com.dinechain.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,6 +40,16 @@ public class InventoryController {
     @PreAuthorize(Roles.STOCK)
     public ResponseEntity<InventoryResponse> updateInventory(@CurrentUser Integer staffId, @PathVariable Integer branchId, @PathVariable Integer ingredientId, @Valid @RequestBody UpdateInventoryRequest request) {
         return ResponseEntity.ok(inventoryService.updateInventory(staffId, branchId, ingredientId, request));
+    }
+
+    @PostMapping("/branch/{branchId}/import")
+    @PreAuthorize(Roles.STOCK)
+    @Operation(summary = "Nhập tồn kho (tay hoặc từ file Excel/CSV)",
+        description = "rows: [{name, unit, quantity, minStock}]. Nguyên liệu chưa có sẽ được tạo (cần unit); số lượng là tồn thực tế hiện tại")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<StockImportResponse> importStock(@CurrentUser Integer staffId, @PathVariable Integer branchId,
+                                                           @Valid @RequestBody StockImportRequest request) {
+        return ResponseEntity.ok(inventoryService.importStock(staffId, branchId, request.rows()));
     }
 
     @GetMapping("/branch/{branchId}")

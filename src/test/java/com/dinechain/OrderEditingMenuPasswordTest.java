@@ -241,7 +241,7 @@ class OrderEditingMenuPasswordTest extends IntegrationTestSupport {
                 .content("{\"newPassword\":\"New@12345\"}"))
             .andExpect(status().isForbidden());
         mockMvc.perform(put("/staff/" + cashier.getId() + "/password").with(as(manager)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"newPassword\":\"short\"}"))
+                .content("{\"newPassword\":\"abcd\"}"))
             .andExpect(status().isBadRequest());
         mockMvc.perform(put("/staff/" + cashier.getId() + "/password").with(as(manager)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"newPassword\":\"New@12345\"}"))

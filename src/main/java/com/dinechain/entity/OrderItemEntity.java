@@ -59,6 +59,11 @@ public class OrderItemEntity {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
+    // Copied from the dish when ordered: false = handed out by the floor staff, never on the kitchen screen
+    @Builder.Default
+    @Column(name = "needs_kitchen", nullable = false)
+    private Boolean needsKitchen = true;
+
     @CreationTimestamp
     @Column(name = "ordered_at", nullable = false, updatable = false)
     private LocalDateTime orderedAt;

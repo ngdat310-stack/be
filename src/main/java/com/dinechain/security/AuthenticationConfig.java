@@ -1,4 +1,4 @@
-package com.dinechain.configuration;
+package com.dinechain.security;
 
 import com.dinechain.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,9 +14,12 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/**
+ * How staff are authenticated: loading a staff member by username and checking the BCrypt password hash.
+ */
 @Configuration
 @RequiredArgsConstructor
-public class ApplicationConfig {
+public class AuthenticationConfig {
 
     private final StaffRepository staffRepository;
 

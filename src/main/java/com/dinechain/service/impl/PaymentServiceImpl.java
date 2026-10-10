@@ -9,6 +9,7 @@ import com.dinechain.entity.OrderEntity;
 import com.dinechain.entity.PaymentEntity;
 import com.dinechain.exception.AppException;
 import com.dinechain.exception.ErrorCode;
+import com.dinechain.repository.OrderItemRepository;
 import com.dinechain.repository.OrderRepository;
 import com.dinechain.repository.PaymentRepository;
 import com.dinechain.security.BranchAccessGuard;
@@ -23,7 +24,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Cash only: the cashier enters the money the customer handed over and the server works out the change.
+ * Cash: the cashier enters the money the customer handed over and the server works out the change.
+ * Bank transfer exists only for web takeaway: the guest transfers to the chain's QR and the cashier confirms it.
+ * Paying a web takeaway order releases it to the kitchen.
  */
 @Slf4j
 @Service
@@ -34,14 +37,11 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderRepository orderRepository;
     private final BranchAccessGuard branchAccessGuard;
     private final LoyaltyService loyaltyService;
+    private final OrderItemRepository orderItemRepository;
 
     @Override
     @Transactional
     public PaymentResponse processPayment(Integer staffId, CreatePaymentRequest request) {
-        if (request.getPaymentMethod() != null && request.getPaymentMethod() != PaymentMethod.CASH) {
-            throw new AppException(ErrorCode.PAYMENT_METHOD_NOT_SUPPORTED);
-        }
-
         // Lock the order: two cashiers paying the same bill at once are handled one after the other
         OrderEntity order = orderRepository.findByIdForUpdate(request.getOrderId())
             .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Order not found: " + request.getOrderId()));
@@ -50,28 +50,41 @@ public class PaymentServiceImpl implements PaymentService {
         if (paymentRepository.findByOrderId(order.getId()).isPresent()) {
             throw new AppException(ErrorCode.ALREADY_PAID, "Order " + order.getCode() + " has already been paid");
         }
-        if (order.getStatus() != OrderStatus.OPEN) {
+        if (order.getStatus() != OrderStatus.OPEN && order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
             throw new AppException(ErrorCode.INVALID_STATE, "Order " + order.getCode() + " is " + order.getStatus());
         }
 
+        PaymentMethod method = request.getPaymentMethod() != null ? request.getPaymentMethod() : PaymentMethod.CASH;
         BigDecimal total = order.getTotalAmount();
-        BigDecimal cash = request.getCashReceived();
-        if (cash.compareTo(total) < 0) {
-            throw new AppException(ErrorCode.INSUFFICIENT_CASH,
-                "Order total is " + total.toPlainString() + " but only " + cash.toPlainString() + " was received");
-        }
-
         PaymentEntity payment = new PaymentEntity();
         payment.setOrderId(order.getId());
-        payment.setMethod(PaymentMethod.CASH);
+        payment.setMethod(method);
         payment.setAmount(total);
-        payment.setCashReceived(cash);
-        payment.setChangeAmount(cash.subtract(total));
         payment.setStatus(PaymentStatus.PAID);
         payment.setReceivedBy(staffId);
+        if (method == PaymentMethod.CASH) {
+            BigDecimal cash = request.getCashReceived();
+            if (cash == null) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, "Cash received is required");
+            }
+            if (cash.compareTo(total) < 0) {
+                throw new AppException(ErrorCode.INSUFFICIENT_CASH,
+                    "Order total is " + total.toPlainString() + " but only " + cash.toPlainString() + " was received");
+            }
+            payment.setCashReceived(cash);
+            payment.setChangeAmount(cash.subtract(total));
+        } else if (method != PaymentMethod.BANK_TRANSFER || order.getPayMethod() != PaymentMethod.BANK_TRANSFER) {
+            throw new AppException(ErrorCode.PAYMENT_METHOD_NOT_SUPPORTED);
+        }
         PaymentEntity saved = paymentRepository.save(payment);
 
-        log.info("Order {} paid in cash: total {}, received {}, change {}", order.getCode(), total, cash, saved.getChangeAmount());
+        if (order.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+            order.setStatus(OrderStatus.OPEN);
+            orderRepository.save(order);
+            orderItemRepository.requeue(order.getId(), LocalDateTime.now());
+            log.info("Web takeaway {} paid: sent to the kitchen", order.getCode());
+        }
+        log.info("Order {} paid by {}: total {}", order.getCode(), method, total);
         return PaymentResponse.from(saved);
     }
 

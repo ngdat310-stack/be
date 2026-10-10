@@ -3,6 +3,7 @@ package com.dinechain.dto.request;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,6 +27,7 @@ public class ReceivePurchaseOrderRequest {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(name = "ReceivedLine")
     public static class Item {
         @NotNull(message = "Purchase order item ID is required")
         private Integer itemId;

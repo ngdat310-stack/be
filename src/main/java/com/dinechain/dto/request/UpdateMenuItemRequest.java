@@ -25,4 +25,7 @@ public class UpdateMenuItemRequest {
     private String imageUrl;
     private String unit;
     private Boolean isActive;
+
+    // false = drink / ready-made: no kitchen, staff hand it out and mark it sold out
+    private Boolean needsKitchen;
 }

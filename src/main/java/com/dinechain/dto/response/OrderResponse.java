@@ -2,6 +2,7 @@ package com.dinechain.dto.response;
 
 import com.dinechain.constant.OrderStatus;
 import com.dinechain.constant.OrderType;
+import com.dinechain.constant.PaymentMethod;
 import com.dinechain.entity.OrderEntity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,6 +37,10 @@ public class OrderResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<OrderItemResponse> items;
+    // Web takeaway only
+    private String guestName;
+    private String guestPhone;
+    private PaymentMethod payMethod;
 
     public static OrderResponse from(OrderEntity entity, List<OrderItemResponse> items) {
         return from(entity, items, null);
@@ -64,6 +69,9 @@ public class OrderResponse {
         response.setCreatedAt(entity.getOpenedAt());
         response.setUpdatedAt(entity.getUpdatedAt());
         response.setItems(items);
+        response.setGuestName(entity.getGuestName());
+        response.setGuestPhone(entity.getGuestPhone());
+        response.setPayMethod(entity.getPayMethod());
         return response;
     }
 }

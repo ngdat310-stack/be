@@ -39,6 +39,7 @@ public class MenuItemServiceImpl implements MenuItemService {
             .imageUrl(request.getImageUrl())
             .unit(request.getUnit() != null ? request.getUnit() : "phần")
             .isActive(request.getIsActive() != null ? request.getIsActive() : true)
+            .needsKitchen(request.getNeedsKitchen() != null ? request.getNeedsKitchen() : true)
             .build();
 
         MenuItemEntity saved = itemRepository.save(item);
@@ -72,6 +73,9 @@ public class MenuItemServiceImpl implements MenuItemService {
         }
         if (request.getIsActive() != null) {
             item.setIsActive(request.getIsActive());
+        }
+        if (request.getNeedsKitchen() != null) {
+            item.setNeedsKitchen(request.getNeedsKitchen());
         }
 
         MenuItemEntity updated = itemRepository.save(item);

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,7 @@ public class CreatePurchaseOrderRequest {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Schema(name = "PurchaseOrderLineRequest")
     public static class Item {
         @NotNull(message = "Ingredient ID is required")
         private Integer ingredientId;

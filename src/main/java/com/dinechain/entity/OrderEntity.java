@@ -2,6 +2,7 @@ package com.dinechain.entity;
 
 import com.dinechain.constant.OrderStatus;
 import com.dinechain.constant.OrderType;
+import com.dinechain.constant.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -86,11 +87,26 @@ public class OrderEntity {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
-    @Column(name = "opened_by", nullable = false)
+    // null = placed by the guest through the table QR code
+    @Column(name = "opened_by")
     private Integer openedBy;
 
     @Column(name = "closed_by")
     private Integer closedBy;
+
+    // Web takeaway: who ordered, how they will pay, and the key of their tracking link
+    @Column(name = "guest_name", length = 100)
+    private String guestName;
+
+    @Column(name = "guest_phone", length = 20)
+    private String guestPhone;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pay_method", length = 20)
+    private PaymentMethod payMethod;
+
+    @Column(name = "public_token", length = 64, unique = true)
+    private String publicToken;
 
     @CreationTimestamp
     @Column(name = "opened_at", nullable = false, updatable = false)

@@ -28,4 +28,8 @@ public class BranchMenuItemEntity {
 
     @Column(name = "is_available", nullable = false)
     private Boolean isAvailable = true;
+
+    // false = this branch does not sell the dish at all (chosen by the owner)
+    @Column(name = "offered", nullable = false)
+    private Boolean offered = true;
 }

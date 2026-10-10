@@ -18,11 +18,11 @@ public class CreatePaymentRequest {
     @NotNull(message = "Order ID is required")
     private Integer orderId;
 
-    // Only CASH is accepted for now (no bank / e-wallet integration); defaults to CASH
+    // CASH (default) or BANK_TRANSFER; a transfer is only accepted on a web takeaway order whose guest chose it,
+    // after the cashier saw the money arrive in the bank app (there is no bank integration)
     private PaymentMethod paymentMethod = PaymentMethod.CASH;
 
-    // Money the customer handed over; change is calculated by the server
-    @NotNull(message = "Cash received is required")
+    // Money the customer handed over (cash only); change is calculated by the server
     @DecimalMin(value = "0", message = "Cash received must not be negative")
     private BigDecimal cashReceived;
 }

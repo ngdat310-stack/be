@@ -1,7 +1,6 @@
-package com.dinechain.security;
+package com.dinechain.security.jwt;
 
 import com.dinechain.entity.StaffEntity;
-import com.dinechain.properties.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;

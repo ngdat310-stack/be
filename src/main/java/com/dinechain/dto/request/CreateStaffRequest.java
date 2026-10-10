@@ -32,7 +32,7 @@ public class CreateStaffRequest {
 
     // Initial password, handed to the employee who should change it via PUT /auth/me/password
     @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Size(min = 5, message = "Password must be at least 5 characters")
     private String password;
 
     @NotNull(message = "Role is required")

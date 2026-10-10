@@ -76,6 +76,39 @@ class TableStockReservationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void tableNamesAreUniqueWithinABranch() throws Exception {
+        StaffEntity manager = createStaff(StaffRole.BRANCH_MANAGER, branch);
+        String area = mockMvc.perform(post("/branches/" + branch.getId() + "/areas").with(as(manager))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Floor 2\"}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        int areaId = JsonPath.read(area, "$.id");
+
+        // T3 already exists on Floor 1: another area of the same branch cannot reuse it, whatever the case
+        mockMvc.perform(post("/areas/" + areaId + "/tables").with(as(manager)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\" t3 \",\"capacity\":4}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("DUPLICATE_TABLE_NAME"));
+        mockMvc.perform(put("/tables/" + table(branch, 2)).with(as(manager)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"T3\",\"capacity\":4}"))
+            .andExpect(status().isConflict());
+
+        // Keeping its own name while changing seats is fine, and another branch has its own T3
+        mockMvc.perform(put("/tables/" + table(branch, 2)).with(as(manager)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"T2\",\"capacity\":6}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.capacity").value(6));
+        BranchEntity other = createBranch(null);
+        StaffEntity otherManager = createStaff(StaffRole.BRANCH_MANAGER, other);
+        int otherArea = areaRepository.findByBranchIdOrderByName(other.getId()).get(0).getId();
+        mockMvc.perform(post("/areas/" + otherArea + "/tables").with(as(otherManager)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"T9\",\"capacity\":2}"))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post("/areas/" + areaId + "/tables").with(as(manager)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"T9\",\"capacity\":2}"))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
     void tableOfAnotherBranchIsRejected() throws Exception {
         BranchEntity other = createBranch(null);
         mockMvc.perform(post("/orders").with(as(cashier)).contentType(MediaType.APPLICATION_JSON)

@@ -2,7 +2,9 @@ package com.dinechain.repository;
 
 import com.dinechain.constant.TableStatus;
 import com.dinechain.entity.DiningTableEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,6 +21,20 @@ public interface DiningTableRepository extends JpaRepository<DiningTableEntity, 
 
     @Query("select t from DiningTableEntity t join AreaEntity a on a.id = t.areaId where a.branchId = :branchId order by a.name, t.name")
     List<DiningTableEntity> findByBranchId(@Param("branchId") Integer branchId);
+
+    boolean existsByAreaId(Integer areaId);
+
+    // Table names are unique per branch, whatever area they sit in; exceptId skips the table being renamed
+    @Query("select count(t) > 0 from DiningTableEntity t join AreaEntity a on a.id = t.areaId "
+        + "where a.branchId = :branchId and lower(t.name) = lower(:name) and t.id <> :exceptId")
+    boolean existsNameInBranch(@Param("branchId") Integer branchId, @Param("name") String name, @Param("exceptId") Integer exceptId);
+
+    Optional<DiningTableEntity> findByQrToken(String qrToken);
+
+    // Two phones at the same table ordering at once must end up on one bill
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from DiningTableEntity t where t.qrToken = :qrToken")
+    Optional<DiningTableEntity> findByQrTokenForUpdate(@Param("qrToken") String qrToken);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update DiningTableEntity t set t.status = :status where t.id = :tableId")

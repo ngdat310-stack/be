@@ -1,18 +1,11 @@
+# Tests run on the real PostgreSQL, in their own schema "dinechain_test": the schema is wiped and rebuilt by the
+# Flyway migrations at the start of each test run, and the application's own data (schema "public") is never touched.
 spring:
   datasource:
-    url: jdbc:h2:mem:dinechain;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-  # H2 cannot run the PostgreSQL migration; tests build the schema from the entities instead
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/dinechain?currentSchema=dinechain_test}
   flyway:
-    enabled: false
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+    schemas: dinechain_test
+    clean-disabled: false
 
 logging:
   level:
@@ -20,7 +13,8 @@ logging:
     org.springframework.security: WARN
 
 dinechain:
-  demo-data:
+  # Tests create exactly the data they need
+  bootstrap:
     enabled: false
   # Order totals in most tests are plain sums; VAT has its own tests that set the rate explicitly
   vat-percent: 0

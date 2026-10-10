@@ -1,10 +1,17 @@
-# Production-safe defaults. Local development uses application-dev.yml, active by default;
-# a real server runs with SPRING_PROFILES_ACTIVE=prod and DB_URL / DB_USERNAME / DB_PASSWORD set.
+# DineChain configuration.
+# Defaults run the app locally (PostgreSQL on localhost, detailed logs).
+# On a real server override with environment variables, e.g.
+#   DB_URL, DB_USERNAME, DB_PASSWORD, BOOTSTRAP_PASSWORD, CORS_ALLOWED_ORIGINS,
+#   JWT_PRIVATE_KEY_PATH=file:/secure/private_key.pem, JWT_PUBLIC_KEY_PATH=file:/secure/public_key.pem,
+#   LOG_LEVEL_APP=INFO, LOG_LEVEL_SECURITY=WARN
 spring:
   application:
     name: DineChain
-  profiles:
-    default: dev
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/dinechain}
+    username: ${DB_USERNAME:dinechain}
+    password: ${DB_PASSWORD:dinechain123}
+    driver-class-name: org.postgresql.Driver
   jpa:
     # Release the DB connection as soon as the service is done, not after the JSON is written (measured: ~3x throughput at peak)
     open-in-view: false
@@ -14,41 +21,43 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: false
-        use_sql_comments: false
+        format_sql: ${SQL_FORMAT:true}
+        use_sql_comments: ${SQL_FORMAT:true}
     show-sql: false
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      # The owner uploads the bank QR image; the service itself limits it to 2 MB
+      max-file-size: 5MB
+      max-request-size: 5MB
   jackson:
     default-property-inclusion: non_null
     datatype:
       datetime:
         write-dates-as-timestamps: false
 
-  flyway:
-    enabled: true
-
 server:
-  port: 8080
+  port: ${PORT:8080}
   servlet:
     context-path: /api/v1
 
 jwt:
-  private-key-path: ${JWT_PRIVATE_KEY_PATH:certs/private_key.pem}
-  public-key-path: ${JWT_PUBLIC_KEY_PATH:certs/public_key.pem}
+  # Keys live in src/main/resources/certs (ignored by git). "file:/path" points outside the jar on a server.
+  private-key-path: ${JWT_PRIVATE_KEY_PATH:classpath:certs/private_key.pem}
+  public-key-path: ${JWT_PUBLIC_KEY_PATH:classpath:certs/public_key.pem}
   access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600}
   refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800}
 
 dinechain:
   cors:
     # Front-end origins allowed to call the API, comma separated (wildcards allowed)
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
-  # 9 demo branches + accounts with well-known passwords; only ever enabled in the dev profile
-  demo-data:
-    enabled: false
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,https://*.ngrok-free.dev}
+  # Empty database: create branches CN01–CN09 and one account per role
+  # (admin, quanly, thungan, phucvu, daubep, kho) with this password. Change the password after the first login.
+  bootstrap:
+    enabled: ${BOOTSTRAP_ENABLED:true}
+    password: ${BOOTSTRAP_PASSWORD:12345}
   # VAT used until the owner sets one via PUT /settings/vat (8% = reduced rate for restaurants until end of 2026)
   vat-percent: 8
   loyalty:
@@ -64,7 +73,7 @@ dinechain:
 logging:
   level:
     root: INFO
-    com.dinechain: INFO
-    org.springframework.security: WARN
+    com.dinechain: ${LOG_LEVEL_APP:DEBUG}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
